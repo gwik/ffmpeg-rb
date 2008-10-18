@@ -72,6 +72,17 @@ VALUE ffmpeg_rat2obj(AVRational *rational) {
 
 end
 
+require File.dirname(__FILE__) + '/lib/rational.rb'
+require File.dirname(__FILE__) + '/lib/format_context.rb'
+require File.dirname(__FILE__) + '/lib/format_parameters.rb'
+require File.dirname(__FILE__) + '/lib/frame.rb'
+require File.dirname(__FILE__) + '/lib/input_format.rb'
+require File.dirname(__FILE__) + '/lib/output_format.rb'
+require File.dirname(__FILE__) + '/lib/packet.rb'
+require File.dirname(__FILE__) + '/lib/stream.rb'
+require File.dirname(__FILE__) + '/lib/codec_context.rb'
+require File.dirname(__FILE__) + '/lib/codec.rb'
+
 require 'pp'
 file = ARGV.shift
 pp (FFMPEG::FormatContext.public_instance_methods - Object.public_instance_methods).sort
@@ -96,4 +107,5 @@ puts
 open 'out.mpeg', 'w' do |io|
   input.transcode 'mpeg', 'mpeg2video', 'mp3', io
 end
+
 
