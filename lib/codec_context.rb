@@ -170,32 +170,32 @@ module FFMPEG
       # :method: sample_aspect_ratio
 
       builder.c <<-C
-  VALUE sample_aspect_ratio() {
-    AVCodecContext *pointer;
-    AVRational *sample_aspect_ratio;
+        VALUE sample_aspect_ratio() {
+          AVCodecContext *pointer;
+          AVRational *sample_aspect_ratio;
 
-    Data_Get_Struct(self, AVCodecContext, pointer);
+          Data_Get_Struct(self, AVCodecContext, pointer);
 
-    sample_aspect_ratio = &(pointer->sample_aspect_ratio);
+          sample_aspect_ratio = &(pointer->sample_aspect_ratio);
 
-    return ffmpeg_rat2obj(sample_aspect_ratio);
-  }
+          return ffmpeg_rat2obj(sample_aspect_ratio);
+        }
       C
 
       ##
       # :method: time_base
 
       builder.c <<-C
-  VALUE time_base() {
-    AVCodecContext *pointer;
-    AVRational *time_base;
+        VALUE time_base() {
+          AVCodecContext *pointer;
+          AVRational *time_base;
 
-    Data_Get_Struct(self, AVCodecContext, pointer);
+          Data_Get_Struct(self, AVCodecContext, pointer);
 
-    time_base = &(pointer->time_base);
+          time_base = &(pointer->time_base);
 
-    return ffmpeg_rat2obj(time_base);
-  }
+          return ffmpeg_rat2obj(time_base);
+        }
       C
     end
 

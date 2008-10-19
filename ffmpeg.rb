@@ -20,14 +20,15 @@ module FFMPEG
       builder.add_compile_flags '-I/opt/ffmpeg/include'
       builder.include '<libavcodec/avcodec.h>'
       builder.include "<libavformat/avformat.h>\n#ifdef RSHIFT\n#undef RSHIFT\n#endif"
-      builder.add_link_flags '-read_only_relocs suppress -L/opt/ffmpeg/lib/ -lavformat -lavcodec -lavutil'
+      builder.include "<libswscale/swscale.h>"
+      builder.add_link_flags '-read_only_relocs suppress -L/opt/ffmpeg/lib/ -lswscale -lavformat -lavcodec -lavutil'
     end
 
     builder.include_ruby_last
 
     builder.prefix <<-C
-AVRational *ffmpeg_obj2rat(VALUE object);
-VALUE ffmpeg_rat2obj(AVRational *rational);
+      AVRational *ffmpeg_obj2rat(VALUE object);
+      VALUE ffmpeg_rat2obj(AVRational *rational);
     C
 
     builder.alias_type_converter 'long long', 'int64_t'
@@ -38,21 +39,21 @@ VALUE ffmpeg_rat2obj(AVRational *rational);
     FFMPEG.builder_defaults builder
 
     builder.prefix <<-C
-AVRational *ffmpeg_obj2rat(VALUE object) {
-  AVRational *rational;
+      AVRational *ffmpeg_obj2rat(VALUE object) {
+        AVRational *rational;
 
-  Data_Get_Struct(object, AVRational, rational);
+        Data_Get_Struct(object, AVRational, rational);
 
-  return rational;
-}
+        return rational;
+      }
 
-VALUE ffmpeg_rat2obj(AVRational *rational) {
-  VALUE klass;
+      VALUE ffmpeg_rat2obj(AVRational *rational) {
+        VALUE klass;
 
-  klass = rb_path2class("FFMPEG::Rational");
+        klass = rb_path2class("FFMPEG::Rational");
 
-  return Data_Wrap_Struct(klass, 0, NULL, rational);
-}
+        return Data_Wrap_Struct(klass, 0, NULL, rational);
+      }
     C
 
     builder.add_to_init <<-C
@@ -82,30 +83,31 @@ require File.dirname(__FILE__) + '/lib/packet.rb'
 require File.dirname(__FILE__) + '/lib/stream.rb'
 require File.dirname(__FILE__) + '/lib/codec_context.rb'
 require File.dirname(__FILE__) + '/lib/codec.rb'
+require File.dirname(__FILE__) + '/lib/image_scaler.rb'
 
 require 'pp'
 file = ARGV.shift
-pp (FFMPEG::FormatContext.public_instance_methods - Object.public_instance_methods).sort
 input = FFMPEG::FormatContext.new file
-
-
 
 puts
 puts "input streams:"
 input.streams.each do |stream|
-  puts "\t%2d %s time base: %f frame rate: %f" % [
+  dsp = "\t%2d %s time base: %f frame rate: %f" % [
     stream.stream_index,
     stream.codec_context.codec_type,
     stream.time_base.to_f,
     stream.r_frame_rate.to_f,
   ]
+  
+  dsp += " size: #{stream.codec_context.width}x#{stream.codec_context.height}" if 
+    stream.codec_context.codec_type == :VIDEO
+    
+  puts dsp
 end
 puts
 puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
 puts
 
 open 'out.mpeg', 'w' do |io|
-  input.transcode 'mpeg', 'mpeg2video', 'mp3', io
+  input.transcode 'avi', 'mpeg2video', 'mp3', io
 end
-
-

@@ -55,32 +55,32 @@ module FFMPEG
       # :method: r_frame_rate
 
       builder.c <<-C
-  VALUE r_frame_rate() {
-    AVStream *stream;
-    AVRational *r_frame_rate;
+        VALUE r_frame_rate() {
+          AVStream *stream;
+          AVRational *r_frame_rate;
 
-    Data_Get_Struct(self, AVStream, stream);
+          Data_Get_Struct(self, AVStream, stream);
 
-    r_frame_rate = &(stream->r_frame_rate);
+          r_frame_rate = &(stream->r_frame_rate);
 
-    return ffmpeg_rat2obj(r_frame_rate);
-  }
+          return ffmpeg_rat2obj(r_frame_rate);
+        }
       C
 
       ##
       # :method: time_base
 
       builder.c <<-C
-  VALUE time_base() {
-    AVStream *stream;
-    AVRational *time_base;
+        VALUE time_base() {
+          AVStream *stream;
+          AVRational *time_base;
 
-    Data_Get_Struct(self, AVStream, stream);
+          Data_Get_Struct(self, AVStream, stream);
 
-    time_base = &(stream->time_base);
+          time_base = &(stream->time_base);
 
-    return ffmpeg_rat2obj(time_base);
-  }
+          return ffmpeg_rat2obj(time_base);
+        }
       C
 
       builder.struct_name = 'AVStream'
@@ -101,10 +101,12 @@ module FFMPEG
 
     attr_accessor :next_pts
     attr_accessor :pts
+    attr_accessor :sync_pts
 
     def initialize
       @next_pts = FFMPEG::NOPTS_VALUE
-      @pts = FFMPEG::NOPTS_VALUE
+      @pts = 0
+      @sync_pts = 0
     end
 
     def inspect
