@@ -294,6 +294,19 @@ module FFMPEG
           return self;
         }
       C
+      
+      ##
+      # :method: write_trailer
+      
+      builder.c %q|
+        VALUE write_trailer() {
+          AVStream *stream;
+          Data_Get_Struct(self, AVStream, stream);
+          av_write_trailer(stream);
+          
+          return self;
+        }
+      |
 
       builder.struct_name = 'AVFormatContext'
       builder.reader :album,     'char *'
@@ -355,7 +368,9 @@ module FFMPEG
     def encode_frame(frame, output_stream)
       @output_buffer ||= "\0" * 1048576
 
-      packet = FFMPEG::Packet.new
+      @output_packet ||= FFMPEG::Packet.new
+      packet = @output_packet.clean
+      
       packet.stream_index = output_stream.stream_index
       
       video_encoder = output_stream.codec_context
@@ -373,17 +388,15 @@ module FFMPEG
         packet.pts = FFMPEG::Rational.rescale_q video_encoder.coded_frame.pts,
                                                 video_encoder.time_base,
                                                 video_stream.time_base
+      else
+        packet.pts = output_stream.sync_pts
       end
-
+      
       if video_encoder.coded_frame and
           video_encoder.coded_frame.key_frame then
         packet.flags |= FFMPEG::Packet::FLAG_KEY
       end
       
-      packet.pts = output_stream.sync_pts
-      
-      puts "NO ENCODED FRAME" unless video_encoder.coded_frame
-
       packet
     end
     
@@ -404,29 +417,30 @@ module FFMPEG
       while len > 0 or
             (packet.nil? and
              input_stream.next_pts != input_stream.pts)
+
+        input_stream.pts = input_stream.next_pts
+
+        data_size = video_decoder.width * video_decoder.height * 3 / 2
+
+        frame.defaults
+        frame.quality = input_stream.quality
+
+        got_picture, bytes = video_decoder.decode_video frame,
+         packet.buffer
+
+        break :fail if bytes < 0
+
+        frame = nil unless got_picture
+
+        if video_decoder.time_base.num != 0 then
+         input_stream.next_pts += FFMPEG::TIME_BASE *
+                                  video_decoder.time_base.num /
+                                  video_decoder.time_base.den
+        end
+
+        len = 0
          
-         input_stream.pts = input_stream.next_pts
-
-         data_size = video_decoder.width * video_decoder.height * 3 / 2
-
-         frame.defaults
-
-         got_picture, bytes = video_decoder.decode_video frame,
-           packet.buffer
-
-         break :fail if bytes < 0
-
-         frame = nil unless got_picture
-
-         if video_decoder.time_base.num != 0 then
-           input_stream.next_pts += FFMPEG::TIME_BASE *
-                                    video_decoder.time_base.num /
-                                    video_decoder.time_base.den
-         end
-
-         len = 0
-         
-         @scaler ||= FFMPEG::ImageScaler.new input_stream.codec_context.width,
+        @scaler ||= FFMPEG::ImageScaler.new input_stream.codec_context.width,
                                       input_stream.codec_context.height,
                                       input_stream.codec_context.pix_fmt,
                                       output_stream.codec_context.width,
@@ -434,20 +448,20 @@ module FFMPEG
                                       output_stream.codec_context.pix_fmt,
                                       FFMPEG::ImageScaler::BICUBIC
          
-         output_stream.sync_pts = input_stream.pts / TIME_BASE.to_f / output_stream.codec_context.time_base.to_f
+        output_stream.sync_pts = input_stream.pts / TIME_BASE.to_f / output_stream.codec_context.time_base.to_f
                                                 
          
-         #@out_frame = @scaler.scale(frame)
-         @out_frame = frame
-         output_packet = output_context.encode_frame @out_frame, output_stream
+        #@out_frame = @scaler.scale(frame)
+        @out_frame = frame
+        output_packet = output_context.encode_frame @out_frame, output_stream
+        
+        STDERR.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
          
-         STDERR.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
-         
-         if output_packet.size > 0 then
-           output_context.interleaved_write output_packet
-         end
+        if output_packet.size > 0 then
+          output_context.interleaved_write output_packet
+        end
 
-         output_context.sync_pts += 1
+        output_context.sync_pts += 1
       end
     end
 
@@ -465,7 +479,8 @@ module FFMPEG
         output_video_stream = output_context.new_output_stream
         output_video_stream.context_defaults FFMPEG::Codec::VIDEO
         video_encoder = output_video_stream.codec_context
-
+        video_encoder.defaults
+        
         output_video_codec = FFMPEG::Codec.for_encoder video
 
         codec_id = output_format.guess_codec nil, output_context.filename, nil,
@@ -475,10 +490,12 @@ module FFMPEG
 
         video_encoder.height = video_stream.codec_context.height
         video_encoder.width  = video_stream.codec_context.width
-
+        
         video_encoder.sample_aspect_ratio.num = 0
         video_encoder.sample_aspect_ratio.den = 0
-
+        
+        video_encoder.bit_rate = 1000 * 1000
+        
         video_encoder.pix_fmt = video_stream.codec_context.pix_fmt
 
         unless video_encoder.rc_initial_buffer_occupancy > 1 then
@@ -516,7 +533,7 @@ module FFMPEG
       #sync_pts = 0
       eof = false
       packet_dts = 0
-
+      
       loop do
         input_pts_min  = 1e100
         output_pts_min = 1e100
@@ -573,6 +590,8 @@ module FFMPEG
         STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
         output input_packet, output_context, output_context.video_stream, video_stream
       end
+      
+      output_context.write_trailer
     end
 
     def video?

@@ -58,6 +58,20 @@ module FFMPEG
           return buffer;
         }
       C
+      
+      ##
+      # :method: clean
+      
+      builder.c <<-C
+        VALUE clean() {
+          AVPacket* packet;
+          Data_Get_Struct(self, AVPacket, packet);
+          
+          av_init_packet(packet);
+          
+          return self;
+        }
+      C
 
       builder.struct_name = 'AVPacket'
       builder.accessor :duration,             'int'

@@ -2,13 +2,14 @@ module FFMPEG
   class FormatParameters
     inline :C do |builder|
       FFMPEG.builder_defaults builder
-      builder.prefix <<-C
+      builder.prefix %q|
         void free_format_parameters(AVFormatParameters* format_parameters)
         {
+          fprintf(stderr, "free format parameters\\n");
           av_free(format_parameters);
         }
       
-      C
+      |
       ##
       # :singleton-method: allocate
 

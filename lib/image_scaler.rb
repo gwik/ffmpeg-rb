@@ -4,12 +4,12 @@ module FFMPEG
     inline :C do |builder|
       FFMPEG.builder_defaults builder
       
-      builder.prefix <<-C
+      builder.prefix %q|
         static void free_sws_context(struct SwsContext * sws_context) {
-          sws_freeContext(sws_context);
+          fprintf(stderr, "free sws context\n");
+          //sws_freeContext(sws_context);
         }
-                
-      C
+      |
       
       builder.c_singleton <<-C
         VALUE new(VALUE origin_width, VALUE origin_height, VALUE origin_pix_fmt,
@@ -17,12 +17,12 @@ module FFMPEG
         {
           VALUE klass = rb_path2class("FFMPEG::ImageScaler");
           struct SwsContext * sws_context = sws_getContext(
-                            NUM2INT(origin_width),
-                            NUM2INT(origin_height),
-                            NUM2INT(origin_pix_fmt),
                             NUM2INT(dest_width),
                             NUM2INT(dest_height),
                             NUM2INT(dest_pix_fmt),
+                            NUM2INT(origin_width),
+                            NUM2INT(origin_height),
+                            NUM2INT(origin_pix_fmt),
                             NUM2INT(sws_flags), NULL, NULL, NULL);
 
           VALUE obj = Data_Wrap_Struct(klass, free_sws_context, 0, sws_context);

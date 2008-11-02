@@ -34,7 +34,7 @@ module FFMPEG
 
           if (codec_context->coded_frame != NULL) {
             frame_klass = rb_path2class("FFMPEG::Frame");
-            Data_Wrap_Struct(frame_klass, NULL, NULL, codec_context->coded_frame);
+            frame = build_from_avframe(codec_context->coded_frame);
           }
 
           return frame;
@@ -197,6 +197,20 @@ module FFMPEG
           return ffmpeg_rat2obj(time_base);
         }
       C
+      
+      ##
+      # :method: defaults
+      
+      builder.c <<-C
+        VALUE defaults() {
+          AVCodecContext *pointer;
+          Data_Get_Struct(self, AVCodecContext, pointer);
+          
+          avcodec_get_context_defaults2(pointer, pointer->codec_type);
+          return self;
+        }
+      C
+      
     end
 
     def codec_type

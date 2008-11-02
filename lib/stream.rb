@@ -82,6 +82,7 @@ module FFMPEG
           return ffmpeg_rat2obj(time_base);
         }
       C
+      
 
       builder.struct_name = 'AVStream'
       builder.accessor :id,           'int'
