@@ -7,14 +7,15 @@ module FFMPEG
         static void free_frame(AVFrame * frame) {
           //av_free(frame->data[0]);
           fprintf(stderr, "free frame\n");
-          //av_free(frame);
+          av_free(frame);
+          fprintf(stderr, "frame freed\n");
         }
         
-        VALUE build_from_avframe(AVFrame * frame) {
+        VALUE build_from_avframe_no_free(AVFrame * frame) {
           VALUE klass = rb_path2class("FFMPEG::Frame");
           VALUE obj;
 
-          obj = Data_Wrap_Struct(klass, free_frame, NULL, frame);
+          obj = Data_Wrap_Struct(klass, 0, NULL, frame);
 
           return obj;
         }

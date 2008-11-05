@@ -2,7 +2,15 @@ module FFMPEG
   class Packet
     inline :C do |builder|
       FFMPEG.builder_defaults builder
-
+      
+      builder.prefix %q|
+        void free_packet(AVPacket * packet) {
+          fprintf(stderr, "free packet\n");
+          //av_destruct_packet(packet);
+          fprintf(stderr, "packet freed\n");
+        }
+      |
+      
       ##
       # :singleton-method: allocate
 
@@ -11,7 +19,7 @@ module FFMPEG
           AVPacket *packet;
           VALUE obj;
 
-          packet = malloc(sizeof(AVPacket));
+          packet = av_malloc(sizeof(AVPacket));
           
           if (!packet)
             rb_raise(rb_eNoMemError, "unable to allocate AVPacket");
@@ -24,7 +32,7 @@ module FFMPEG
           packet->flags = 0;
           packet->stream_index = 0;
           
-          obj = Data_Wrap_Struct(self, 0, 0, packet);
+          obj = Data_Wrap_Struct(self, free_packet, 0, packet);
 
           return obj;
         }
@@ -39,7 +47,7 @@ module FFMPEG
 
           Data_Get_Struct(self, AVPacket, packet);
 
-          return rb_str_new((char *)packet->data, packet->size);
+          return rb_str_new((char *)packet->data, packet->size + FF_INPUT_BUFFER_PADDING_SIZE);
         }
       C
 

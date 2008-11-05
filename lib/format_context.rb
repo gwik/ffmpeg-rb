@@ -440,13 +440,13 @@ module FFMPEG
 
         len = 0
          
-        @scaler ||= FFMPEG::ImageScaler.new input_stream.codec_context.width,
-                                      input_stream.codec_context.height,
-                                      input_stream.codec_context.pix_fmt,
-                                      output_stream.codec_context.width,
-                                      output_stream.codec_context.height,
-                                      output_stream.codec_context.pix_fmt,
-                                      FFMPEG::ImageScaler::BICUBIC
+        # @scaler ||= FFMPEG::ImageScaler.new input_stream.codec_context.width,
+        #                               input_stream.codec_context.height,
+        #                               input_stream.codec_context.pix_fmt,
+        #                               output_stream.codec_context.width,
+        #                               output_stream.codec_context.height,
+        #                               output_stream.codec_context.pix_fmt,
+        #                               FFMPEG::ImageScaler::BICUBIC
          
         output_stream.sync_pts = input_stream.pts / TIME_BASE.to_f / output_stream.codec_context.time_base.to_f
                                                 
@@ -478,6 +478,9 @@ module FFMPEG
 
         output_video_stream = output_context.new_output_stream
         output_video_stream.context_defaults FFMPEG::Codec::VIDEO
+        output_video_stream.time_base.num = 1
+        output_video_stream.time_base.den = 25
+        
         video_encoder = output_video_stream.codec_context
         video_encoder.defaults
         
@@ -490,6 +493,8 @@ module FFMPEG
 
         video_encoder.height = video_stream.codec_context.height
         video_encoder.width  = video_stream.codec_context.width
+        
+        video_encoder.gop_size = 10
         
         video_encoder.sample_aspect_ratio.num = 0
         video_encoder.sample_aspect_ratio.den = 0

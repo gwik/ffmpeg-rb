@@ -108,6 +108,6 @@ puts
 puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
 puts
 
-open 'out.flv', 'w' do |io|
-  input.transcode 'flv', 'flv', 'mp3', io
+open 'out.avi', 'w' do |io|
+  input.transcode 'avi', 'mpeg1video', 'mp3', io
 end

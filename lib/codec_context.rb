@@ -34,7 +34,7 @@ module FFMPEG
 
           if (codec_context->coded_frame != NULL) {
             frame_klass = rb_path2class("FFMPEG::Frame");
-            frame = build_from_avframe(codec_context->coded_frame);
+            frame = build_from_avframe_no_free(codec_context->coded_frame);
           }
 
           return frame;
@@ -154,6 +154,7 @@ module FFMPEG
       builder.accessor :bit_rate_tolerance,          'int'
       builder.accessor :height,                      'int'
       builder.accessor :pix_fmt,                     'int'
+      builder.accessor :gop_size,                    'int'
       builder.accessor :rc_buffer_size,              'int'
       builder.accessor :rc_initial_buffer_occupancy, 'int'
       builder.accessor :width,                       'int'
