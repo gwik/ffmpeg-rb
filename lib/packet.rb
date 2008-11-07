@@ -47,7 +47,7 @@ module FFMPEG
 
           Data_Get_Struct(self, AVPacket, packet);
 
-          return rb_str_new((char *)packet->data, packet->size + FF_INPUT_BUFFER_PADDING_SIZE);
+          return rb_str_new((char *)packet->data, packet->size);
         }
       C
 

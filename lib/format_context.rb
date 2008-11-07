@@ -321,7 +321,7 @@ module FFMPEG
       builder.accessor :max_delay,   'int'
       builder.accessor :preload,     'int'
 
-      builder.reader :bit_rate,    'int'
+      builder.accessor :bit_rate,    'int'
       builder.reader :track,       'int'
       builder.reader :year,        'int'
 
@@ -387,7 +387,7 @@ module FFMPEG
         video_encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
         packet.pts = FFMPEG::Rational.rescale_q video_encoder.coded_frame.pts,
                                                 video_encoder.time_base,
-                                                video_stream.time_base
+                                                output_stream.time_base
       else
         packet.pts = output_stream.sync_pts
       end
@@ -494,12 +494,15 @@ module FFMPEG
         video_encoder.height = video_stream.codec_context.height
         video_encoder.width  = video_stream.codec_context.width
         
-        video_encoder.gop_size = 10
+        video_encoder.gop_size = 12
         
         video_encoder.sample_aspect_ratio.num = 0
         video_encoder.sample_aspect_ratio.den = 0
-        
-        video_encoder.bit_rate = 1000 * 1000
+                
+        video_encoder.bit_rate =  1000 * 1000
+        output_context.bit_rate = 1000 * 1000
+        video_encoder.bit_rate_tolerance = 200 * 1000
+        #video_encoder.max_b_frames = 8
         
         video_encoder.pix_fmt = video_stream.codec_context.pix_fmt
 

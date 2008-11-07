@@ -158,6 +158,7 @@ module FFMPEG
       builder.accessor :rc_buffer_size,              'int'
       builder.accessor :rc_initial_buffer_occupancy, 'int'
       builder.accessor :width,                       'int'
+      builder.accessor :max_b_frames,                'int'
 
       builder.reader :channels,    'int'
       builder.reader :codec_id,    'int'
