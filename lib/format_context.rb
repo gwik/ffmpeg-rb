@@ -379,7 +379,7 @@ module FFMPEG
       bytes = video_encoder.encode_video frame, @output_buffer
       
       p :encoded => bytes
-
+      
       packet.buffer = @output_buffer
       packet.size = bytes
       
@@ -392,6 +392,8 @@ module FFMPEG
         packet.pts = output_stream.sync_pts
       end
       
+      puts video_encoder.coded_frame.pict_type
+      
       if video_encoder.coded_frame and
           video_encoder.coded_frame.key_frame then
         packet.flags |= FFMPEG::Packet::FLAG_KEY
@@ -401,8 +403,9 @@ module FFMPEG
     end
     
     def output(packet, output_context, output_stream, input_stream)
-      frame = FFMPEG::Frame.new
+      GC.start
       video_decoder = input_stream.codec_context
+      @in_frame = FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
       
       input_stream.next_pts = input_stream.pts if input_stream.next_pts == NOPTS_VALUE
       
@@ -422,15 +425,15 @@ module FFMPEG
 
         data_size = video_decoder.width * video_decoder.height * 3 / 2
 
-        frame.defaults
-        frame.quality = input_stream.quality
-
-        got_picture, bytes = video_decoder.decode_video frame,
+        @in_frame.defaults
+        @in_frame.quality = input_stream.quality
+        
+        got_picture, bytes = video_decoder.decode_video @in_frame,
          packet.buffer
-
+        
         break :fail if bytes < 0
 
-        frame = nil unless got_picture
+        @in_frame = nil unless got_picture
 
         if video_decoder.time_base.num != 0 then
          input_stream.next_pts += FFMPEG::TIME_BASE *
@@ -440,22 +443,19 @@ module FFMPEG
 
         len = 0
          
-        # @scaler ||= FFMPEG::ImageScaler.new input_stream.codec_context.width,
-        #                               input_stream.codec_context.height,
-        #                               input_stream.codec_context.pix_fmt,
-        #                               output_stream.codec_context.width,
-        #                               output_stream.codec_context.height,
-        #                               output_stream.codec_context.pix_fmt,
-        #                               FFMPEG::ImageScaler::BICUBIC
-         
+        @scaler ||= FFMPEG::ImageScaler.new video_decoder.width,
+                                      video_decoder.height,
+                                      video_decoder.pix_fmt,
+                                      output_stream.codec_context.width,
+                                      output_stream.codec_context.height,
+                                      output_stream.codec_context.pix_fmt,
+                                      FFMPEG::ImageScaler::BICUBIC
+        
         output_stream.sync_pts = input_stream.pts / TIME_BASE.to_f / output_stream.codec_context.time_base.to_f
                                                 
-         
-        #@out_frame = @scaler.scale(frame)
-        @out_frame = frame
-        output_packet = output_context.encode_frame @out_frame, output_stream
+        output_packet = output_context.encode_frame @scaler.scale(@in_frame), output_stream
         
-        STDERR.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
+        # STDERR.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
          
         if output_packet.size > 0 then
           output_context.interleaved_write output_packet
@@ -467,6 +467,7 @@ module FFMPEG
 
     def transcode(wrapper, video, audio, io)
       @scaler = nil
+      @in_frame = nil
       output_audio_codec = FFMPEG::Codec.for_encoder audio
 
       output_context = FFMPEG::FormatContext.new io, wrapper
@@ -498,7 +499,10 @@ module FFMPEG
         
         video_encoder.sample_aspect_ratio.num = 0
         video_encoder.sample_aspect_ratio.den = 0
-                
+        
+        video_encoder.width = 300
+        video_encoder.height = 200
+        
         video_encoder.bit_rate =  1000 * 1000
         output_context.bit_rate = 1000 * 1000
         video_encoder.bit_rate_tolerance = 200 * 1000
@@ -595,7 +599,7 @@ module FFMPEG
         # end
         
         break :fail if input_packet.pts == NOPTS_VALUE
-        STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
+        # STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
         output input_packet, output_context, output_context.video_stream, video_stream
       end
       

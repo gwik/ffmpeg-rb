@@ -5,10 +5,13 @@ module FFMPEG
       
       builder.prefix %q|
         static void free_frame(AVFrame * frame) {
-          //av_free(frame->data[0]);
-          fprintf(stderr, "free frame\n");
+          fprintf(stderr, "free frame %p\n", frame);
+          if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER) {
+            fprintf(stderr, "free frame data\n");
+            av_free(frame->data[0]);
+          }
           av_free(frame);
-          fprintf(stderr, "frame freed\n");
+          //fprintf(stderr, "frame freed\n");
         }
         
         VALUE build_from_avframe_no_free(AVFrame * frame) {
@@ -19,6 +22,16 @@ module FFMPEG
 
           return obj;
         }
+        
+        VALUE build_frame(AVFrame * frame) {
+          VALUE klass = rb_path2class("FFMPEG::Frame");
+          VALUE obj;
+
+          obj = Data_Wrap_Struct(klass, 0, free_frame, frame);
+
+          return obj;
+        }
+        
       |
       
       ##
@@ -30,11 +43,17 @@ module FFMPEG
           VALUE obj;
 
           frame = avcodec_alloc_frame();
-
+          frame->data[0] = NULL;
+          frame->data[1] = NULL;
+          frame->data[2] = NULL;
+          frame->data[3] = NULL;
+          
           if (!frame)
             rb_raise(rb_eNoMemError, "unable to allocate AVFrame");
+            
+          // fprintf(stderr, "alloc frame %p\\n", frame);
 
-          obj = Data_Wrap_Struct(self, free_frame, NULL, frame);
+          obj = Data_Wrap_Struct(self, 0, free_frame, frame);
 
           return obj;
         }
@@ -60,7 +79,7 @@ module FFMPEG
       #     avpicture_fill((AVPicture *)picture, picture_buf,
       #         pix_fmt, width, height);
       #     
-      #     VALUE obj = Data_Wrap_Struct(self, free_frame, NULL, picture);
+      #     VALUE obj = Data_Wrap_Struct(self, 0, free_frame, picture);
       #     rb_funcall(obj, rb_intern("initialize"), 3, width, height, pix_fmt);
       #     
       #     return obj;
@@ -94,10 +113,18 @@ module FFMPEG
         }
       C
       
-
       builder.struct_name = 'AVFrame'
       builder.accessor :pts, 'int64_t'
       builder.accessor :quality, 'int'
+      builder.reader   :pict_type, 'int'
+      
+      builder.map_c_const 'FF_I_TYPE'  => ['int', :I_TYPE]
+      builder.map_c_const 'FF_P_TYPE'  => ['int', :P_TYPE]
+      builder.map_c_const 'FF_B_TYPE'  => ['int', :B_TYPE]
+      builder.map_c_const 'FF_S_TYPE'  => ['int', :S_TYPE]
+      builder.map_c_const 'FF_SI_TYPE' => ['int', :SI_TYPE]
+      builder.map_c_const 'FF_SP_TYPE' => ['int', :SP_TYPE]
+      builder.map_c_const 'FF_BI_TYPE' => ['int', :BI_TYPE]
     end
     
     attr_accessor :width, :height, :pix_fmt

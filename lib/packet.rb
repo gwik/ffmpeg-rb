@@ -5,9 +5,10 @@ module FFMPEG
       
       builder.prefix %q|
         void free_packet(AVPacket * packet) {
-          fprintf(stderr, "free packet\n");
-          //av_destruct_packet(packet);
-          fprintf(stderr, "packet freed\n");
+          // fprintf(stderr, "free packet\n");
+          av_destruct_packet(packet);
+          av_free(packet);
+          // fprintf(stderr, "packet freed\n");
         }
       |
       
@@ -32,7 +33,7 @@ module FFMPEG
           packet->flags = 0;
           packet->stream_index = 0;
           
-          obj = Data_Wrap_Struct(self, free_packet, 0, packet);
+          obj = Data_Wrap_Struct(self, 0, free_packet, packet);
 
           return obj;
         }

@@ -6,8 +6,7 @@ module FFMPEG
       
       builder.prefix %q|
         static void free_sws_context(struct SwsContext * sws_context) {
-          fprintf(stderr, "free sws context\n");
-          //sws_freeContext(sws_context);
+          sws_freeContext(sws_context);
         }
       |
       
@@ -17,15 +16,15 @@ module FFMPEG
         {
           VALUE klass = rb_path2class("FFMPEG::ImageScaler");
           struct SwsContext * sws_context = sws_getContext(
-                            NUM2INT(dest_width),
-                            NUM2INT(dest_height),
-                            NUM2INT(dest_pix_fmt),
                             NUM2INT(origin_width),
                             NUM2INT(origin_height),
                             NUM2INT(origin_pix_fmt),
+                            NUM2INT(dest_width),
+                            NUM2INT(dest_height),
+                            NUM2INT(dest_pix_fmt),
                             NUM2INT(sws_flags), NULL, NULL, NULL);
 
-          VALUE obj = Data_Wrap_Struct(klass, free_sws_context, 0, sws_context);
+          VALUE obj = Data_Wrap_Struct(klass, 0, free_sws_context, sws_context);
           
           rb_funcall(obj, rb_intern("initialize"), 7, origin_width, origin_height, 
                     origin_pix_fmt, dest_width, dest_height, dest_pix_fmt, sws_flags);
@@ -41,16 +40,31 @@ module FFMPEG
           AVFrame * out_frame;
           VALUE frame_klass = rb_path2class("FFMPEG::Frame");
           
-          VALUE rb_out_frame = rb_funcall(frame_klass, rb_intern("build"), 3,
-            rb_iv_get(self, "@dest_width"), rb_iv_get(self, "@dest_height"),
+          VALUE rb_out_frame = rb_funcall(frame_klass, rb_intern("new"), 3,
+            rb_iv_get(self, "@dest_width"),
+            rb_iv_get(self, "@dest_height"),
             rb_iv_get(self, "@dest_pix_fmt"));
+          
           
           Data_Get_Struct(self, struct SwsContext, img_convert_ctx);
           Data_Get_Struct(rb_in_frame, AVFrame, in_frame);
           Data_Get_Struct(rb_out_frame, AVFrame, out_frame);
           
+          if (NULL == in_frame->data[0])
+            return rb_out_frame;
+          
+          avcodec_get_frame_defaults(out_frame);
+          
+          avpicture_alloc((AVPicture*)out_frame,
+                             FIX2INT(rb_iv_get(self, "@dest_pix_fmt")),
+                             FIX2INT(rb_iv_get(self, "@dest_width")),
+                             FIX2INT(rb_iv_get(self, "@dest_height")));
+          
           sws_scale(img_convert_ctx, in_frame->data, in_frame->linesize,
-                    0, FIX2INT(rb_iv_get(self, "@origin_height")), out_frame->data, out_frame->linesize);
+                    0, FIX2INT(rb_iv_get(self, "@origin_height")),
+                    out_frame->data, out_frame->linesize);
+          
+          out_frame->type = FF_BUFFER_TYPE_USER;
           
           return rb_out_frame;
         }

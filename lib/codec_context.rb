@@ -100,7 +100,7 @@ module FFMPEG
           } else {
             Data_Get_Struct(picture, AVFrame, frame);
           }
-
+          
           buf_used = avcodec_encode_video(codec_context,
                                           (uint8_t *)StringValuePtr(buf),
                                           RSTRING_LEN(buf), frame);
