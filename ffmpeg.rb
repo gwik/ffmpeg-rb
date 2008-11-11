@@ -111,5 +111,3 @@ puts
 open 'out.mpeg', 'w' do |io|
   input.transcode 'mpeg', 'mpeg2video', 'mp3', io
 end
-
-sleep 3000

@@ -5,9 +5,9 @@ module FFMPEG
       
       builder.prefix %q|
         static void free_frame(AVFrame * frame) {
-          fprintf(stderr, "free frame %p\n", frame);
+          //fprintf(stderr, "free frame %p\n", frame);
           if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER) {
-            fprintf(stderr, "free frame data\n");
+            //fprintf(stderr, "free frame data\n");
             av_free(frame->data[0]);
           }
           av_free(frame);

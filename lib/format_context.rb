@@ -393,12 +393,14 @@ module FFMPEG
         packet.pts = output_stream.sync_pts
       end
       
-      puts video_encoder.coded_frame.pict_type
+      # puts video_encoder.coded_frame.pict_type
       
       if video_encoder.coded_frame and
           video_encoder.coded_frame.key_frame then
         packet.flags |= FFMPEG::Packet::FLAG_KEY
       end
+      
+      puts "time: #{output_stream.sync_pts * video_encoder.time_base.to_f}"
       
       packet
     end
@@ -497,11 +499,11 @@ module FFMPEG
         
         video_encoder.gop_size = 12
         
-        video_encoder.sample_aspect_ratio.num = 0
-        video_encoder.sample_aspect_ratio.den = 0
-        
         video_encoder.width = 300
         video_encoder.height = 200
+        
+        video_encoder.sample_aspect_ratio.num = 4/3 * 200/300
+        video_encoder.sample_aspect_ratio.den = 255
         
         video_encoder.bit_rate =  1000 * 1000
         output_context.bit_rate = 1000 * 1000
