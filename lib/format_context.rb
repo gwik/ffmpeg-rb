@@ -366,10 +366,11 @@ module FFMPEG
     end
 
     def encode_frame(frame, output_stream)
+      GC.start
       @output_buffer ||= "\0" * 1048576
-
-      @output_packet ||= FFMPEG::Packet.new
-      packet = @output_packet.clean
+      @output_packet = FFMPEG::Packet.new
+      packet = @output_packet
+      #packet = @output_packet.clean
       
       packet.stream_index = output_stream.stream_index
       
@@ -403,9 +404,8 @@ module FFMPEG
     end
     
     def output(packet, output_context, output_stream, input_stream)
-      GC.start
       video_decoder = input_stream.codec_context
-      @in_frame = FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
+      @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
       
       input_stream.next_pts = input_stream.pts if input_stream.next_pts == NOPTS_VALUE
       
@@ -442,7 +442,7 @@ module FFMPEG
         end
 
         len = 0
-         
+        
         @scaler ||= FFMPEG::ImageScaler.new video_decoder.width,
                                       video_decoder.height,
                                       video_decoder.pix_fmt,

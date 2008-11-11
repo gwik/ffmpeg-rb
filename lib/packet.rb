@@ -5,10 +5,9 @@ module FFMPEG
       
       builder.prefix %q|
         void free_packet(AVPacket * packet) {
-          // fprintf(stderr, "free packet\n");
-          av_destruct_packet(packet);
+          fprintf(stderr, "free packet\n");
           av_free(packet);
-          // fprintf(stderr, "packet freed\n");
+          fprintf(stderr, "packet freed\n");
         }
       |
       
@@ -63,7 +62,9 @@ module FFMPEG
 
           packet->data = (unsigned char *)StringValuePtr(buffer);
           packet->size = RSTRING_LEN(buffer);
-
+          
+          fprintf(stderr, "data buffer %p\\n", packet->data);
+          
           return buffer;
         }
       C

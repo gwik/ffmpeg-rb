@@ -4,36 +4,37 @@ module FFMPEG
       FFMPEG.builder_defaults builder
 
       builder.map_c_const 'AV_ROUND_NEAR_INF' => ['int', :ROUND_NEAR_INF]
-
+      
+      builder.prefix <<-C
+        static void free_rational(AVRational * rational) {
+          av_free(rational);
+        }
+      C
+      
       ##
       # :singleton-method: from
 
       builder.c_singleton <<-C
         VALUE from(double value, int max) {
-          AVRational rational;
-          VALUE obj;
+          AVRational rational = av_d2q(value, max);
 
-          rational = av_d2q(value, max);
-
-          obj = Data_Wrap_Struct(self, 0, NULL, &rational);
-
-          return obj;
+          return Data_Wrap_Struct(self, 0, free_rational, &rational);
         }
       C
 
-      ##
-      # :singleton-method: new
-
-      builder.c_singleton <<-C
-        VALUE new(VALUE num, VALUE den) {
-          VALUE obj = Data_Wrap_Struct(self, 0, NULL, NULL);
-
-          if (NIL_P(rb_funcall(obj, rb_intern("initialize"), 2, num, den)))
-            return Qfalse;
-
-          return obj;
-        }
-      C
+      # ##
+      # # :singleton-method: new
+      # 
+      # builder.c_singleton <<-C
+      #   VALUE new(VALUE num, VALUE den) {
+      #     VALUE obj = Data_Wrap_Struct(self, 0, NULL, NULL);
+      # 
+      #     if (NIL_P(rb_funcall(obj, rb_intern("initialize"), 2, num, den)))
+      #       return Qfalse;
+      # 
+      #     return obj;
+      #   }
+      # C
 
       ##
       # :singleton-method: rescale_rnd
@@ -44,23 +45,33 @@ module FFMPEG
         }
       C
 
+      builder.c <<-C
+        VALUE allocate() {
+          AVRational *rational;
+
+          rational = av_mallocz(sizeof(AVRational));
+          
+          if (!rational) {
+            rb_raise(rb_eNoMemError, "could not allocate AVRational");
+          }
+          
+          rational->num = 0;
+          rational->den = 1;
+          
+          return Data_Wrap_Struct(self, 0, free_rational, rational);
+        }
+      C
+      
       ##
       # :method: initialize
 
       builder.c <<-C
         VALUE initialize(int num, int den) {
-          AVRational *rational;
-
-          rational = av_mallocz(sizeof(AVRational));
-
-          if (!rational) {
-            rb_raise(rb_eNoMemError, "could not allocate AVRational");
-          }
-
+          AVRational * rational;
+          Data_Get_Struct(self, AVRational, rational);
+          
           rational->num = num;
           rational->den = den;
-
-          DATA_PTR(self) = rational;
 
           return self;
         }

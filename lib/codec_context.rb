@@ -103,7 +103,7 @@ module FFMPEG
           
           buf_used = avcodec_encode_video(codec_context,
                                           (uint8_t *)StringValuePtr(buf),
-                                          RSTRING_LEN(buf), frame);
+                                          RSTRING_LEN(buf) / 2, frame);
 
           return buf_used;
         }
