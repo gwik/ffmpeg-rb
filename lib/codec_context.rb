@@ -65,7 +65,7 @@ module FFMPEG
         VALUE decode_video(VALUE picture, VALUE buffer) {
           AVCodecContext *codec_context;
           AVFrame *frame;
-          VALUE ret;
+          volatile VALUE ret;
           int got_picture = 0;
           int buf_used;
           

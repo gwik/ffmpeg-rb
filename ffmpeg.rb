@@ -36,7 +36,6 @@ module FFMPEG
       typedef struct FrameBuffer {
         uint8_t * buf;
         int size;
-        void ** ptr;
       } FrameBuffer;
       
       #endif

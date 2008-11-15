@@ -5,9 +5,6 @@ module FFMPEG
       
       builder.prefix <<-C
         static free_frame_buffer(FrameBuffer * buf) {
-          if (buf->ptr != NULL)
-            *(buf->ptr) = NULL;
-          
           if (buf->buf) {
             av_free(buf->buf);
           }
@@ -28,7 +25,6 @@ module FFMPEG
           frame_buffer = av_mallocz(sizeof(FrameBuffer));
           frame_buffer->buf = packet->data;
           frame_buffer->size = packet->size;
-          frame_buffer->ptr = (void **) &(packet->data);
           return Data_Wrap_Struct(self, 0, free_frame_buffer, frame_buffer);
         }
       C

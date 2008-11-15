@@ -366,7 +366,6 @@ module FFMPEG
     end
 
     def encode_frame(frame, output_stream)
-      GC.start
       @output_buffer = FrameBuffer.new(1048576)
       @output_packet = FFMPEG::Packet.new
       packet = @output_packet.clean
@@ -434,7 +433,7 @@ module FFMPEG
         got_picture, bytes = video_decoder.decode_video @in_frame,
          packet.buffer
         
-        break :fail if bytes < 0
+        break :fail if bytes.nil?
 
         @in_frame = nil unless got_picture
 
@@ -544,12 +543,15 @@ module FFMPEG
       output_context.write_header
       
       input_packet = FFMPEG::Packet.new
+      
       output_context.video_stream.sync_pts = 0
       #sync_pts = 0
       eof = false
       packet_dts = 0
       
       loop do
+        input_packet.clean
+        
         input_pts_min  = 1e100
         output_pts_min = 1e100
         
@@ -562,7 +564,7 @@ module FFMPEG
         end
 
         eof = true unless read_frame input_packet
-
+        
         next unless input_packet.stream_index == video_stream.stream_index
 
         if input_packet.dts != FFMPEG::NOPTS_VALUE then

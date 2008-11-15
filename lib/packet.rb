@@ -5,7 +5,9 @@ module FFMPEG
       
       builder.prefix %q|
         static void free_packet(AVPacket * packet) {
+          // fprintf(stderr, "free packet\n");
           av_free(packet);
+          // fprintf(stderr, "packet freed\n");
         }
       |
       
@@ -36,9 +38,6 @@ module FFMPEG
           AVPacket* packet;
           Data_Get_Struct(self, AVPacket, packet);
           
-          if (NULL == packet->data)
-            return Qnil;
-          
           VALUE buffer = rb_iv_get(self, "@buffer");
           
           FrameBuffer * buf = NULL;
@@ -47,7 +46,7 @@ module FFMPEG
             Data_Get_Struct(buffer, FrameBuffer, buf);
           }
           
-          if (NIL_P(buffer) || (buf && buf->buf != packet->data)) {
+          if (NIL_P(buffer) || (buf->buf != packet->data)) {
             VALUE frame_buffer_class = rb_path2class("FFMPEG::FrameBuffer");
             buffer = rb_funcall(frame_buffer_class, rb_intern("build_from_packet"), 1, self);
             rb_iv_set(self, "@buffer", buffer);
@@ -69,7 +68,6 @@ module FFMPEG
           
           packet->data = buf->buf;
           packet->size = buf->size;
-          buf->ptr = (void **) &(packet->data);
           
           rb_iv_set(self, "@buffer", buffer);
           
