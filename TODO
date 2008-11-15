@@ -1,0 +1,7 @@
+* free stream, codecs, codec contexts, format contexts
+* hunt down the 16 bit string leak (run leaks command on process to see it)
+* implement audio stream encoding
+* refactor video encoding loop, split methods
+* implement image manipulations : crop, pad, ...
+* support rtp streams
+* implement subtitle encoding
