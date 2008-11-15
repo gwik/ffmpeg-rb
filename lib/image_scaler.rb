@@ -45,6 +45,7 @@ module FFMPEG
             rb_iv_get(self, "@dest_height"),
             rb_iv_get(self, "@dest_pix_fmt"));
           
+          rb_funcall(rb_out_frame, rb_intern("fill"), 0);
           
           Data_Get_Struct(self, struct SwsContext, img_convert_ctx);
           Data_Get_Struct(rb_in_frame, AVFrame, in_frame);
@@ -52,19 +53,10 @@ module FFMPEG
           
           if (NULL == in_frame->data[0])
             return rb_out_frame;
-          
-          avcodec_get_frame_defaults(out_frame);
-          
-          avpicture_alloc((AVPicture*)out_frame,
-                             FIX2INT(rb_iv_get(self, "@dest_pix_fmt")),
-                             FIX2INT(rb_iv_get(self, "@dest_width")),
-                             FIX2INT(rb_iv_get(self, "@dest_height")));
-          
+                    
           sws_scale(img_convert_ctx, in_frame->data, in_frame->linesize,
                     0, FIX2INT(rb_iv_get(self, "@origin_height")),
                     out_frame->data, out_frame->linesize);
-          
-          out_frame->type = FF_BUFFER_TYPE_USER;
           
           return rb_out_frame;
         }

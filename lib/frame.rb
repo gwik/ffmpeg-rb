@@ -113,6 +113,38 @@ module FFMPEG
         }
       C
       
+      builder.c <<-C
+        VALUE fill() {
+          AVFrame *frame;
+          Data_Get_Struct(self, AVFrame, frame);
+
+          VALUE pix_fmt = rb_iv_get(self, "@pix_fmt");
+          VALUE width = rb_iv_get(self, "@width");
+          VALUE height = rb_iv_get(self, "@height");
+          
+          if (!FIXNUM_P(pix_fmt))
+            rb_raise(rb_eRuntimeError, "pix_fmt not set properly cannot fill");
+          if (!FIXNUM_P(width))
+            rb_raise(rb_eRuntimeError, "width not set properly cannot fill");
+          if (!FIXNUM_P(height))
+            rb_raise(rb_eRuntimeError, "height not set properly cannot fill");
+          
+          // free data if needed
+          if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER)
+            av_freep(frame->data[0]);
+          
+          avcodec_get_frame_defaults(frame);
+          frame->type = FF_BUFFER_TYPE_USER;
+          
+          avpicture_alloc((AVPicture*)frame,
+                             FIX2INT(pix_fmt),
+                             FIX2INT(width),
+                             FIX2INT(height));
+          
+          return self;
+        }
+      C
+      
       builder.struct_name = 'AVFrame'
       builder.accessor :pts, 'int64_t'
       builder.accessor :quality, 'int'
