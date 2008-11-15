@@ -5,17 +5,14 @@ module FFMPEG
       
       builder.prefix <<-C
         static free_frame_buffer(FrameBuffer * buf) {
-          fprintf(stderr, "free buffer\\n");
           if (buf->ptr != NULL)
             *(buf->ptr) = NULL;
           
           if (buf->buf) {
-            fprintf(stderr, "buffer %p\\n", buf->buf);
             av_free(buf->buf);
           }
           
           av_free(buf);
-          fprintf(stderr, "buffer freed %p\\n", buf);
         }
       C
       
