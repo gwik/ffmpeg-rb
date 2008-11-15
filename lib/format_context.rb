@@ -242,7 +242,7 @@ module FFMPEG
           Data_Get_Struct(_packet, AVPacket, packet);
 
           err = av_read_frame(format_context, packet);
-
+          fprintf(stderr, "read frame packet data %p\\n", packet->data);
           return err < 0 ? Qfalse : Qtrue;
         }
       C
@@ -367,10 +367,9 @@ module FFMPEG
 
     def encode_frame(frame, output_stream)
       GC.start
-      @output_buffer ||= "\0" * 1048576
+      @output_buffer = FrameBuffer.new(1048576)
       @output_packet = FFMPEG::Packet.new
-      packet = @output_packet
-      #packet = @output_packet.clean
+      packet = @output_packet.clean
       
       packet.stream_index = output_stream.stream_index
       
@@ -400,12 +399,14 @@ module FFMPEG
         packet.flags |= FFMPEG::Packet::FLAG_KEY
       end
       
+      puts video_encoder.coded_frame.type.to_s
       puts "time: #{output_stream.sync_pts * video_encoder.time_base.to_f}"
       
       packet
     end
     
     def output(packet, output_context, output_stream, input_stream)
+      GC.start
       video_decoder = input_stream.codec_context
       @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
       

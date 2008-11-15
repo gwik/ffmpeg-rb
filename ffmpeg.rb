@@ -23,12 +23,23 @@ module FFMPEG
       builder.include "<libswscale/swscale.h>"
       builder.add_link_flags '-read_only_relocs suppress -L/opt/ffmpeg/lib/ -lswscale -lavformat -lavcodec -lavutil'
     end
-
+    
     builder.include_ruby_last
 
     builder.prefix <<-C
+      #ifndef __EXT__
+      #define __EXT__
+      
       AVRational *ffmpeg_obj2rat(VALUE object);
       VALUE ffmpeg_rat2obj(AVRational *rational);
+      
+      typedef struct FrameBuffer {
+        uint8_t * buf;
+        int size;
+        void ** ptr;
+      } FrameBuffer;
+      
+      #endif
     C
 
     builder.alias_type_converter 'long long', 'int64_t'
@@ -74,6 +85,7 @@ module FFMPEG
 end
 
 require File.dirname(__FILE__) + '/lib/rational.rb'
+require File.dirname(__FILE__) + '/lib/frame_buffer.rb'
 require File.dirname(__FILE__) + '/lib/format_context.rb'
 require File.dirname(__FILE__) + '/lib/format_parameters.rb'
 require File.dirname(__FILE__) + '/lib/frame.rb'

@@ -4,7 +4,7 @@ module FFMPEG
       FFMPEG.builder_defaults builder
       
       builder.prefix %q|
-        void free_packet(AVPacket * packet) {
+        static void free_packet(AVPacket * packet) {
           // fprintf(stderr, "free packet\n");
           av_free(packet);
           // fprintf(stderr, "packet freed\n");
@@ -23,11 +23,7 @@ module FFMPEG
           
           if (!packet)
             rb_raise(rb_eNoMemError, "unable to allocate AVPacket");
-          
-          packet->pts   = AV_NOPTS_VALUE;
-          packet->dts   = AV_NOPTS_VALUE;
-          packet->pos   = -1;
-          
+                    
           obj = Data_Wrap_Struct(self, 0, free_packet, packet);
 
           return obj;
@@ -36,36 +32,55 @@ module FFMPEG
 
       ##
       # :method: buffer
-
+      
       builder.c <<-C
         VALUE buffer() {
           AVPacket* packet;
-
           Data_Get_Struct(self, AVPacket, packet);
-
-          return rb_str_new((char *)packet->data, packet->size);
-        }
-      C
-
-      ##
-      # :method: buffer=
-
-      builder.c <<-C
-        VALUE buffer_equals(VALUE buffer) {
-          AVPacket* packet;
-
-          Data_Get_Struct(self, AVPacket, packet);
-          rb_iv_set(self, "@buffer", buffer);
           
-          packet->data = (unsigned char *)StringValuePtr(buffer);
-          packet->size = RSTRING_LEN(buffer);
+          if (NULL == packet->data)
+            return Qnil;
           
-          fprintf(stderr, "data buffer %p\\n", packet->data);
+          VALUE buffer = rb_iv_get(self, "@buffer");
+          
+          FrameBuffer * buf = NULL;
+          
+          if (!NIL_P(buffer)) {
+            Data_Get_Struct(buffer, FrameBuffer, buf);
+          }
+          
+          if (NIL_P(buffer) || (buf && buf->buf != packet->data)) {
+            VALUE frame_buffer_class = rb_path2class("FFMPEG::FrameBuffer");
+            buffer = rb_funcall(frame_buffer_class, rb_intern("build_from_packet"), 1, self);
+            rb_iv_set(self, "@buffer", buffer);
+          }
           
           return buffer;
         }
       C
       
+      ##
+      # :method: buffer=
+      
+      builder.c <<-C
+        VALUE buffer_equals(VALUE buffer) {
+          AVPacket* packet;
+          FrameBuffer * buf;
+          Data_Get_Struct(buffer, FrameBuffer, buf);
+          Data_Get_Struct(self, AVPacket, packet);
+          
+          packet->data = buf->buf;
+          packet->size = buf->size;
+          buf->ptr = (void **) &(packet->data);
+          
+          rb_iv_set(self, "@buffer", buffer);
+          
+          // fprintf(stderr, "data buffer %p\\n", packet->data);
+          
+          return buffer;
+        }
+      C
+            
       ##
       # :method: clean
       
@@ -75,11 +90,16 @@ module FFMPEG
           Data_Get_Struct(self, AVPacket, packet);
           
           av_init_packet(packet);
+          packet->data = NULL;
+          packet->size = 0;
+          packet->pts   = AV_NOPTS_VALUE;
+          packet->dts   = AV_NOPTS_VALUE;
+          packet->pos   = -1;
           
           return self;
         }
       C
-
+      
       builder.struct_name = 'AVPacket'
       builder.accessor :duration,             'int'
       builder.accessor :flags,                'int'
@@ -95,6 +115,10 @@ module FFMPEG
     end
     
     alias :stream_index= :stream_index_equals
+  end
+  
+  def initialize
+    clean
   end
     
 end

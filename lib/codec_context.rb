@@ -62,20 +62,26 @@ module FFMPEG
       # :method: decode_video
 
       builder.c <<-C
-        VALUE decode_video(VALUE picture, VALUE buf) {
+        VALUE decode_video(VALUE picture, VALUE buffer) {
           AVCodecContext *codec_context;
           AVFrame *frame;
           VALUE ret;
           int got_picture = 0;
           int buf_used;
-
+          
+          if (NIL_P(buffer))
+            return Qnil;
+          
+          FrameBuffer * buf;
+          Data_Get_Struct(buffer, FrameBuffer, buf);
+          
           Data_Get_Struct(self, AVCodecContext, codec_context);
           Data_Get_Struct(picture, AVFrame, frame);
 
           buf_used = avcodec_decode_video(codec_context, frame, &got_picture,
-                                          (uint8_t *)StringValuePtr(buf),
-                                          RSTRING_LEN(buf));
-
+                                          buf->buf,
+                                          buf->size);
+          
           ret = rb_ary_new();
           rb_ary_push(ret, INT2NUM(got_picture));
           rb_ary_push(ret, INT2NUM(buf_used));
@@ -88,11 +94,13 @@ module FFMPEG
       # :method: encode_video
 
       builder.c <<-C
-        int encode_video(VALUE picture, VALUE buf) {
+        int encode_video(VALUE picture, VALUE buffer) {
           AVCodecContext *codec_context;
           AVFrame *frame;
           int buf_used;
-
+          FrameBuffer * buf;
+          
+          Data_Get_Struct(buffer, FrameBuffer, buf);
           Data_Get_Struct(self, AVCodecContext, codec_context);
         
           if (NIL_P(picture)) {
@@ -102,8 +110,8 @@ module FFMPEG
           }
           
           buf_used = avcodec_encode_video(codec_context,
-                                          (uint8_t *)StringValuePtr(buf),
-                                          RSTRING_LEN(buf), frame);
+                                          buf->buf,
+                                          buf->size, frame);
 
           return buf_used;
         }

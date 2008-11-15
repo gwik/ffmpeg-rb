@@ -1,17 +1,18 @@
 module FFMPEG
+    
   class Frame
     inline :C do |builder|
       FFMPEG.builder_defaults builder
       
       builder.prefix %q|
         static void free_frame(AVFrame * frame) {
-          //fprintf(stderr, "free frame %p\n", frame);
+          fprintf(stderr, "free frame %p\n", frame);
           if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER) {
-            //fprintf(stderr, "free frame data\n");
+            fprintf(stderr, "free frame data %p\n", frame->data[0]);
             av_free(frame->data[0]);
           }
           av_free(frame);
-          //fprintf(stderr, "frame freed\n");
+          fprintf(stderr, "frame freed\n");
         }
         
         VALUE build_from_avframe_no_free(AVFrame * frame) {
