@@ -50,26 +50,7 @@ module FFMPEG
           return Data_Wrap_Struct(self, 0, free_frame_buffer, frame_buf);
         }
       C
-      
-      ##
-      # :method: clean
-      
-      builder.c <<-C
-        VALUE clean() {
-          FrameBuffer * frame_buf;
-          Data_Get_Struct(self, FrameBuffer, frame_buf);
-          
-          if (frame_buf->buf)
-            av_freep(frame_buf->buf);
-          if (frame_buf->ptr != NULL)
-            *(frame_buf->ptr) = NULL;
-          
-          frame_buf->buf = av_mallocz(frame_buf->size);
-          
-          return self;
-        }
-      C
-      
+            
       builder.struct_name = 'FrameBuffer'
       
       builder.accessor :size, 'int'
