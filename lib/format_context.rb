@@ -233,17 +233,23 @@ module FFMPEG
       # :method: read_frame
 
       builder.c <<-C
-        VALUE read_frame(VALUE _packet) {
+        VALUE read_frame(VALUE rb_packet) {
           AVFormatContext *format_context;
           AVPacket *packet;
           int err;
 
           Data_Get_Struct(self, AVFormatContext, format_context);
-          Data_Get_Struct(_packet, AVPacket, packet);
+          Data_Get_Struct(rb_packet, AVPacket, packet);
 
           err = av_read_frame(format_context, packet);
-          fprintf(stderr, "read frame packet data %p\\n", packet->data);
-          return err < 0 ? Qfalse : Qtrue;
+          
+          if (err < 0)
+            return Qfalse;
+          
+          // refresh the buffer
+          rb_funcall(rb_packet, rb_intern("buffer"), 0);
+          
+          return Qtrue;
         }
       C
 
@@ -366,8 +372,8 @@ module FFMPEG
     end
 
     def encode_frame(frame, output_stream)
-      @output_buffer = FrameBuffer.new(1048576)
-      @output_packet = FFMPEG::Packet.new
+      @output_buffer ||= FrameBuffer.new(1048576)
+      @output_packet ||= FFMPEG::Packet.new
       packet = @output_packet.clean
       
       packet.stream_index = output_stream.stream_index
@@ -405,7 +411,6 @@ module FFMPEG
     end
     
     def output(packet, output_context, output_stream, input_stream)
-      GC.start
       video_decoder = input_stream.codec_context
       @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
       
