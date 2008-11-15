@@ -5,9 +5,7 @@ module FFMPEG
       
       builder.prefix %q|
         static void free_packet(AVPacket * packet) {
-          // fprintf(stderr, "free packet\n");
           av_free(packet);
-          // fprintf(stderr, "packet freed\n");
         }
       |
       
@@ -70,8 +68,6 @@ module FFMPEG
           packet->size = buf->size;
           
           rb_iv_set(self, "@buffer", buffer);
-          
-          // fprintf(stderr, "data buffer %p\\n", packet->data);
           
           return buffer;
         }
