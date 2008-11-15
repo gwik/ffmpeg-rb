@@ -27,11 +27,6 @@ module FFMPEG
           packet->pts   = AV_NOPTS_VALUE;
           packet->dts   = AV_NOPTS_VALUE;
           packet->pos   = -1;
-          packet->duration = 0;
-          packet->convergence_duration = 0;
-          packet->flags = 0;
-          packet->stream_index = 0;
-          packet->data = NULL;
           
           obj = Data_Wrap_Struct(self, 0, free_packet, packet);
 
