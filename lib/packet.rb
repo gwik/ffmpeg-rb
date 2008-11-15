@@ -16,10 +16,10 @@ module FFMPEG
 
       builder.c_singleton <<-C
         VALUE allocate() {
-          AVPacket *packet;
+          AVPacket * packet;
           VALUE obj;
 
-          packet = av_malloc(sizeof(AVPacket));
+          packet = av_mallocz(sizeof(AVPacket));
           
           if (!packet)
             rb_raise(rb_eNoMemError, "unable to allocate AVPacket");
@@ -31,6 +31,7 @@ module FFMPEG
           packet->convergence_duration = 0;
           packet->flags = 0;
           packet->stream_index = 0;
+          packet->data = NULL;
           
           obj = Data_Wrap_Struct(self, 0, free_packet, packet);
 
@@ -59,11 +60,12 @@ module FFMPEG
           AVPacket* packet;
 
           Data_Get_Struct(self, AVPacket, packet);
-
+          rb_iv_set(self, "@buffer", buffer);
+          
           packet->data = (unsigned char *)StringValuePtr(buffer);
           packet->size = RSTRING_LEN(buffer);
           
-          // fprintf(stderr, "data buffer %p\\n", packet->data);
+          fprintf(stderr, "data buffer %p\\n", packet->data);
           
           return buffer;
         }
