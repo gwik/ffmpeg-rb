@@ -165,6 +165,18 @@ module FFMPEG
       @width, @height, @pix_fmt = width, height, pix_fmt
     end
     
+    def type
+      case pict_type
+      when I_TYPE ; :I_TYPE
+      when P_TYPE ; :P_TYPE
+      when B_TYPE ; :B_TYPE
+      when S_TYPE ; :S_TYPE
+      when SI_TYPE ; :S_TYPE
+      when SP_TYPE ; :SP_TYPE
+      when BI_TYPE ; :BI_TYPE
+      end
+    end
+    
     alias :key_frame? :key_frame
     
   end
