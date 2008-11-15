@@ -6,7 +6,7 @@ require 'inline'
 
 module FFMPEG
 
-  VERSION = '1.0.0'
+  VERSION = '0.0.1'
 
   class Rational; end
 
