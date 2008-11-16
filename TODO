@@ -1,3 +1,5 @@
+* b frames support
+* fix non seekable output problem
 * free stream, codecs, codec contexts, format contexts
 * hunt down the 16 bit string leak (run leaks command on process to see it)
 * implement audio stream encoding
