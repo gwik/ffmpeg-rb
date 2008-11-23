@@ -46,7 +46,7 @@ module FFMPEG
             
           obj = Data_Wrap_Struct(self, 0, 0, codec);
           
-          rb_funcall(obj, rb_intern("initialize"), 1, decoder);
+          rb_funcall(obj, rb_intern("initialize"), 0);
           
           return obj;
         }
@@ -76,7 +76,7 @@ module FFMPEG
           
           obj = Data_Wrap_Struct(self, 0, 0, codec);
           
-          rb_funcall(obj, rb_intern("initialize"), 1, encoder);
+          rb_funcall(obj, rb_intern("initialize"), 0);
           
           return obj;
         }
