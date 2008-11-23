@@ -52,8 +52,8 @@ module FFMPEG
           
           codec_klass = rb_path2class("FFMPEG::Codec");
           
-          return rb_funcall(codec_klass, rb_intern("for_decoder"), 2,
-                            self, INT2NUM(codec_context->codec_id));
+          return rb_funcall(codec_klass, rb_intern("for_decoder"), 1,
+                            INT2NUM(codec_context->codec_id));
         }
       C
       
@@ -68,8 +68,8 @@ module FFMPEG
           
           codec_klass = rb_path2class("FFMPEG::Codec");
           
-          return rb_funcall(codec_klass, rb_intern("for_encoder"), 2,
-                            self, INT2NUM(codec_context->codec_id));
+          return rb_funcall(codec_klass, rb_intern("for_encoder"), 1,
+                            INT2NUM(codec_context->codec_id));
         }
       C
       
