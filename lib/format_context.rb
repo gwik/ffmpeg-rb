@@ -336,7 +336,10 @@ module FFMPEG
       builder.reader :start_time, 'int64_t'
       builder.reader :timestamp,  'int64_t'
     end
-
+    
+    # file accepts a file or a IO object for output
+    #
+    # IO on output will make the output not seekable
     def initialize(file, output = false)
       @input = !output
       @timestamp_offset = 0
@@ -488,6 +491,8 @@ module FFMPEG
         output_video_stream.context_defaults FFMPEG::Codec::VIDEO
         output_video_stream.time_base.num = 1
         output_video_stream.time_base.den = 25
+        output_video_stream.duration = Rational.rescale_q(video_stream.duration,
+          video_stream.time_base, output_video_stream.time_base)
         
         video_encoder = output_video_stream.codec_context
         video_encoder.defaults

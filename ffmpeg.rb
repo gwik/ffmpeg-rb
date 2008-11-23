@@ -119,6 +119,4 @@ puts
 puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
 puts
 
-open 'out.mpeg', 'w' do |io|
-  input.transcode 'mpeg', 'mpeg2video', 'mp3', io
-end
+input.transcode 'mp4', 'mpeg4', 'mp3', "out.mp4"
