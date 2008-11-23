@@ -8,21 +8,41 @@ module FFMPEG
     inline :C do |builder|
       FFMPEG.builder_defaults builder
       
+      # free methods
+      # 
+      # format context is responsible for freeing its codecs, codec_context and streams.
+      # Ruby corresponding objects must old a reference (instance variable) to the
+      # their parent object so they
+      # would not be released before the format context is freed.
       builder.prefix <<-C
-        void free_format_context(AVFormatContext *format_context) {
+        
+        static void free_codecs(AVFormatContext * format_context)
+        {
+          int i;
+          for(i = 0; i < format_context->nb_streams; i++) {
+            if (format_context->streams[i]->codec->codec)
+              avcodec_close(format_context->streams[i]->codec);
+          }
+        }
+        
+        static void free_streams(AVFormatContext * format_context)
+        {
+          int i;
+          for(i = 0; i < format_context->nb_streams; i++) {
+            av_free(format_context->streams[i]->codec);
+            av_free(format_context->streams[i]);
+          }
+        }
+        
+        static void free_format_context(AVFormatContext *format_context) {
           if (format_context) {
-            int i;
-            for(i = 0; i < format_context->nb_streams; i++) {
-              if (NULL != format_context->streams[i]->codec->codec) {
-                avcodec_close(format_context->streams[i]->codec);
-              }
-            }
+            
+            free_codecs(format_context);
             
             if (format_context->iformat) {
-              fprintf(stderr, "free input format context\\n");
               av_close_input_file(format_context);
             } else {
-              fprintf(stderr, "free output format context\\n");
+              free_streams(format_context);
               av_free(format_context);
             }
           }
@@ -38,7 +58,7 @@ module FFMPEG
           
           format_context = av_alloc_format_context();
           
-          VALUE obj = Data_Wrap_Struct(self, 0, NULL, format_context);
+          VALUE obj = Data_Wrap_Struct(self, 0, free_format_context, format_context);
           
           return obj;
         }

@@ -5,7 +5,6 @@ module FFMPEG
       
       ##
       # :singleton-method: from
-      
       builder.c_singleton <<-C
         VALUE from(VALUE stream_obj) {
           AVStream *stream;
@@ -13,9 +12,9 @@ module FFMPEG
           
           Data_Get_Struct(stream_obj, AVStream, stream);
           
-          obj = Data_Wrap_Struct(self, NULL, NULL, stream->codec);
+          obj = Data_Wrap_Struct(self, 0, 0, stream->codec);
           
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, stream_obj);
           
           return obj;
         }
@@ -53,8 +52,24 @@ module FFMPEG
           
           codec_klass = rb_path2class("FFMPEG::Codec");
           
-          return rb_funcall(codec_klass, rb_intern("for_decoder"), 1,
-                            INT2NUM(codec_context->codec_id));
+          return rb_funcall(codec_klass, rb_intern("for_decoder"), 2,
+                            self, INT2NUM(codec_context->codec_id));
+        }
+      C
+      
+      ##
+      # :method: encoder
+      builder.c <<-C
+        VALUE encoder() {
+          VALUE codec_klass;
+          AVCodecContext *codec_context;
+          
+          Data_Get_Struct(self, AVCodecContext, codec_context);
+          
+          codec_klass = rb_path2class("FFMPEG::Codec");
+          
+          return rb_funcall(codec_klass, rb_intern("for_encoder"), 2,
+                            self, INT2NUM(codec_context->codec_id));
         }
       C
       
@@ -118,23 +133,6 @@ module FFMPEG
       C
       
       ##
-      # :method: encoder
-      
-      builder.c <<-C
-        VALUE encoder() {
-          VALUE codec_klass;
-          AVCodecContext *codec_context;
-          
-          Data_Get_Struct(self, AVCodecContext, codec_context);
-          
-          codec_klass = rb_path2class("FFMPEG::Codec");
-          
-          return rb_funcall(codec_klass, rb_intern("for_encoder"), 1,
-                            INT2NUM(codec_context->codec_id));
-        }
-      C
-      
-      ##
       # :method: open
       
       builder.c <<-C
@@ -142,6 +140,10 @@ module FFMPEG
           AVCodecContext *codec_context;
           AVCodec *codec;
           int err;
+          
+          VALUE iv_codec = rb_iv_get(self, "@codec");
+          if (!NIL_P(iv_codec))
+            return iv_codec;
           
           Data_Get_Struct(self, AVCodecContext, codec_context);
           Data_Get_Struct(_codec, AVCodec, codec);
@@ -151,6 +153,9 @@ module FFMPEG
           if (err < 0) {
             rb_raise(rb_eRuntimeError, "error opening codec: %d.  Check bit_rate, rate, width, height", err);
           }
+          
+          RDATA(_codec)->dfree = 0;
+          rb_iv_set(self, "@codec", _codec);
           
           return self;
         }
@@ -221,6 +226,14 @@ module FFMPEG
       
       
       builder.reader :codec_name, 'char *'
+    end
+    
+    class << self
+      private :new
+    end
+    
+    def initialize(stream=nil)
+      @stream = stream
     end
     
     def codec_type

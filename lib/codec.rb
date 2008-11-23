@@ -25,7 +25,6 @@ module FFMPEG
       
       ##
       # :singleton-method: for_decoder
-      
       builder.c_singleton <<-C
         VALUE for_decoder(VALUE codec_id_or_name) {
           AVCodec *codec;
@@ -45,9 +44,9 @@ module FFMPEG
           
           if (codec == NULL) return Qnil;
             
-          obj = Data_Wrap_Struct(self, 0, NULL, codec);
+          obj = Data_Wrap_Struct(self, 0, 0, codec);
           
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, decoder);
           
           return obj;
         }
@@ -75,9 +74,9 @@ module FFMPEG
           
           if (codec == NULL) return Qnil;
           
-          obj = Data_Wrap_Struct(self, 0, NULL, codec);
+          obj = Data_Wrap_Struct(self, 0, 0, codec);
           
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, encoder);
           
           return obj;
         }
@@ -100,7 +99,7 @@ module FFMPEG
           
           obj = Data_Wrap_Struct(self, 0, NULL, codec);
           
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, codec_context);
           
           return obj;
         }
@@ -110,6 +109,10 @@ module FFMPEG
       builder.accessor :name, 'char *'
       
       builder.accessor :_type, 'int', :type
+    end
+    
+    def initialize(codec_context=nil)
+      @codec_context = nil
     end
     
     def type

@@ -19,7 +19,7 @@ module FFMPEG
           
           obj = Data_Wrap_Struct(self, 0, NULL, format_context->oformat);
           
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, ffmpeg);
           
           return obj;
         }
@@ -95,6 +95,10 @@ module FFMPEG
       builder.reader :extensions, 'char *'
       
       builder.reader :flags, 'int'
+    end
+    
+    def initialize(format_context)
+      @format_context = format_context
     end
   end
 end

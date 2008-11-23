@@ -5,7 +5,6 @@ module FFMPEG
       
       ##
       # :singleton-method: from
-      
       builder.c_singleton <<-C
         VALUE from(VALUE _format_context, int index) {
           AVFormatContext *format_context;
@@ -14,10 +13,10 @@ module FFMPEG
           
           Data_Get_Struct(_format_context, AVFormatContext, format_context);
           
-          obj = Data_Wrap_Struct(self, 0, NULL,
+          obj = Data_Wrap_Struct(self, 0, 0,
                                  format_context->streams[idx]);
           
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, _format_context);
           
           return obj;
         }
@@ -25,7 +24,6 @@ module FFMPEG
       
       ##
       # :method: codec_context
-      
       builder.c <<-C
         VALUE codec_context() {
           VALUE codec_context_klass;
@@ -104,7 +102,8 @@ module FFMPEG
     attr_accessor :pts
     attr_accessor :sync_pts
     
-    def initialize
+    def initialize(format_context=nil)
+      @format_context = format_context
       @next_pts = FFMPEG::NOPTS_VALUE
       @pts = 0
       @sync_pts = 0
