@@ -499,7 +499,99 @@ module FFMPEG
       stream_map = StreamMap.new(self)
       yield stream_map
       raise RuntimeError.new("map is empty !") if stream_map.empty?
+      
       # TODO do prep and transcode
+      stream_map.ouput_format_contexts.each do |output_context|
+        output_context.write_header
+      end
+      
+      input_packet = FFMPEG::Packet.new
+      
+      eof = false
+      packet_dts = 0
+      
+      loop do
+        input_packet.clean
+        
+        eof = true unless read_frame input_packet
+        
+        # next unless input_packet.stream_index == video_stream.stream_index
+        
+        if input_packet.dts != FFMPEG::NOPTS_VALUE then
+          input_packet.dts += FFMPEG::Rational.rescale_q @timestamp_offset,
+                                                         FFMPEG::TIME_BASE_Q,
+                                                         video_stream.time_base
+        end
+        
+        if input_packet.pts != FFMPEG::NOPTS_VALUE then
+          input_packet.pts += FFMPEG::Rational.rescale_q @timestamp_offset,
+                                                         FFMPEG::TIME_BASE_Q,
+                                                         video_stream.time_base
+        end
+        
+        break :fail if input_packet.pts == NOPTS_VALUE
+        # STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
+        stream_map.map[packet.stream_index].each do |output_stream|
+          output input_packet, output_stream.format_context, output_stream, streams[input_packet.stream_index]
+        end
+      end
+      
+      output_context.write_trailer
+    end
+    
+    def prepare_transcoding(map)
+      stream_map.map.keys.each_pair do |index, output_streams|
+        # prepare input stream
+        input_stream = streams[index]
+        decoder = input_stream.codec_context
+        
+        video_stream.pts = 0
+        video_stream.next_pts = FFMPEG::NOPTS_VALUE
+        
+        decoder.open Codec.for_decoder(decoder.codec_id)
+        
+        # prepare output streams
+        output_streams.each do |output_stream|
+          output_context = output_stream.format_context
+          encoder = output_stream.codec_context
+          
+          output_context.preload = 0.5 * FFMPEG::TIME_BASE
+          output_context.max_delay = 0.7 * FFMPEG::TIME_BASE
+          output_context.loop_output = FFMPEG::OutputFormat::NO_OUTPUT_LOOP
+          
+          output_stream.sync_pts = 0
+          
+          ouput_stream.duration = Rational.rescale_q(video_stream.duration,
+            video_stream.time_base, output_video_stream.time_base) if 
+              output_stream.duration.zero?
+          
+          encoder.open Codec.for_encoder(encoder.codec_id)
+          
+          if encoder.type == :VIDEO
+            
+            # TODO preserve ratio if width or height provided
+            if encoder.width == 0
+              encoder.width = decoder.width
+              encoder.height = decoder.heigth
+            end
+            
+            encoder.sample_aspect_ratio.num = 4/3 * encoder.width/encoder.heigth
+            encoder.sample_aspect_ratio.den = 255
+            
+            encoder.bit_rate_tolerance = 0.2 * encoder.bit_rate if
+              encoder.bit_rate_tolerance.zero?
+            
+            encoder.pix_fmt = decoder.pix_fmt if video_encoder.pix_fmt == -1
+            
+            unless encoder.rc_initial_buffer_occupancy > 1 then
+              encoder.rc_initial_buffer_occupancy =
+                encoder.rc_buffer_size * 3 / 4
+            end
+            
+          end
+          
+        end
+      end
     end
     
     # output only
@@ -520,6 +612,7 @@ module FFMPEG
       
       stream
     end
+    
     
     def transcode(wrapper, video, audio, io)
       @scaler = nil
@@ -549,9 +642,6 @@ module FFMPEG
                                              FFMPEG::Codec::VIDEO
         video_encoder.time_base.num = 1
         video_encoder.time_base.den = 25
-        
-        video_encoder.height = video_stream.codec_context.height
-        video_encoder.width  = video_stream.codec_context.width
         
         video_encoder.gop_size = 12
         

@@ -10,7 +10,7 @@ module FFMPEG
   # stream_map.map(input_format.audio_stream, output_format3.audio_stream)
   class StreamMap
     
-    attr_reader :map
+    attr_reader :map, :input_format_context, :output_format_contexts
     
     def initialize(input_format_context)
       @input_format_context = input_format_context
@@ -18,7 +18,7 @@ module FFMPEG
       @map = {}
     end
     
-    def map(out_stream)
+    def add(in_stream, out_stream)
       raise InvalidMap.new("stream type differs") unless in_stream.type != out_stream.type
       raise InvalidMap.new("invalid stream : no format context") unless
         out_stream.format_context

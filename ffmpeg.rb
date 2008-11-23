@@ -101,13 +101,13 @@ file = ARGV.shift
 input = FFMPEG::FormatContext.new file
 input_video_steam = input.video_stream
 
-flv = FFMPEG::FormatContext.new 'out.flv', 'flv'
-mp4 = FFMPEG::FormatContext.new 'out.mp4', 'mp4'
+flv = FFMPEG::FormatContext.new 'out.flv'
+mp4 = FFMPEG::FormatContext.new 'out.mp4'
 
 input.transcode_map do |stream_map|
-  stream_map.map input_video_steam,
+  stream_map.add input_video_steam,
     flv.new_output_stream('flv', :bit_rate => 1000*1000, :width => 300, :height => 200)
-  stream_map.map input_video_steam,
+  stream_map.add input_video_steam,
     mp4.new_output_stream('mpeg4', :bit_rate => 1000*1000, :width => 640, :height => 480, :gop_size => 12)
 end
 
