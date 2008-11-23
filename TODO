@@ -1,5 +1,4 @@
 * b frames support
-* free stream, codecs, codec contexts, format contexts
 * implement audio stream encoding
 * refactor video encoding loop, split methods
 * implement image manipulations : crop, pad, ...
