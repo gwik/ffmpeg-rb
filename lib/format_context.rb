@@ -11,9 +11,9 @@ module FFMPEG
       # free methods
       # 
       # format context is responsible for freeing its codecs, codec_context and streams.
-      # Ruby corresponding objects must old a reference (instance variable) to the
-      # their parent object so they
-      # would not be released before the format context is freed.
+      # Ruby corresponding objects must hold a reference (instance variable) to
+      # their parent object so format context do not free memory before ruby object are
+      # garbage collected.
       builder.prefix <<-C
         
         static void free_codecs(AVFormatContext * format_context)
