@@ -11,23 +11,23 @@ module FFMPEG
       
       ##
       # :singleton-method: allocate
-
+      
       builder.c_singleton <<-C
         VALUE allocate() {
           AVPacket * packet;
           VALUE obj;
-
+          
           packet = av_mallocz(sizeof(AVPacket));
           
           if (!packet)
             rb_raise(rb_eNoMemError, "unable to allocate AVPacket");
-                    
+          
           obj = Data_Wrap_Struct(self, 0, free_packet, packet);
-
+          
           return obj;
         }
       C
-
+      
       ##
       # :method: buffer
       
@@ -72,7 +72,7 @@ module FFMPEG
           return buffer;
         }
       C
-            
+      
       ##
       # :method: clean
       
@@ -98,7 +98,7 @@ module FFMPEG
       builder.accessor :convergence_duration, 'int'
       builder.accessor :size,                 'int'
       builder.accessor :stream_index,         'int'
-
+      
       builder.accessor :dts, 'int64_t'
       builder.accessor :pos, 'int64_t'
       builder.accessor :pts, 'int64_t'

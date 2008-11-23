@@ -15,18 +15,18 @@ module FFMPEG
         VALUE build_from_avframe_no_free(AVFrame * frame) {
           VALUE klass = rb_path2class("FFMPEG::Frame");
           VALUE obj;
-
+          
           obj = Data_Wrap_Struct(klass, 0, NULL, frame);
-
+          
           return obj;
         }
         
         VALUE build_frame(AVFrame * frame) {
           VALUE klass = rb_path2class("FFMPEG::Frame");
           VALUE obj;
-
+          
           obj = Data_Wrap_Struct(klass, 0, free_frame, frame);
-
+          
           return obj;
         }
         
@@ -34,12 +34,12 @@ module FFMPEG
       
       ##
       # :singleton-method: allocate
-
+      
       builder.c_singleton <<-C
         VALUE allocate() {
           AVFrame *frame;
           VALUE obj;
-
+          
           frame = avcodec_alloc_frame();
           frame->data[0] = NULL;
           frame->data[1] = NULL;
@@ -50,9 +50,9 @@ module FFMPEG
             rb_raise(rb_eNoMemError, "unable to allocate AVFrame");
             
           // fprintf(stderr, "alloc frame %p\\n", frame);
-
+          
           obj = Data_Wrap_Struct(self, 0, free_frame, frame);
-
+          
           return obj;
         }
       C
@@ -86,15 +86,15 @@ module FFMPEG
       
       ##
       # :method: defaults
-
+      
       builder.c <<-C
         VALUE defaults() {
           AVFrame *frame;
-
+          
           Data_Get_Struct(self, AVFrame, frame);
-
+          
           avcodec_get_frame_defaults(frame);
-
+          
           return self;
         }
       C
@@ -115,7 +115,7 @@ module FFMPEG
         VALUE fill() {
           AVFrame *frame;
           Data_Get_Struct(self, AVFrame, frame);
-
+          
           VALUE pix_fmt = rb_iv_get(self, "@pix_fmt");
           VALUE width = rb_iv_get(self, "@width");
           VALUE height = rb_iv_get(self, "@height");

@@ -23,7 +23,7 @@ module FFMPEG
                             NUM2INT(dest_height),
                             NUM2INT(dest_pix_fmt),
                             NUM2INT(sws_flags), NULL, NULL, NULL);
-
+          
           VALUE obj = Data_Wrap_Struct(klass, 0, free_sws_context, sws_context);
           
           rb_funcall(obj, rb_intern("initialize"), 7, origin_width, origin_height, 

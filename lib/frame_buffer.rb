@@ -31,7 +31,7 @@ module FFMPEG
       
       ##
       # :method: new
-
+      
       builder.c_singleton <<-C
         VALUE new(int size) {
           FrameBuffer * frame_buf;
@@ -43,7 +43,7 @@ module FFMPEG
           return Data_Wrap_Struct(self, 0, free_frame_buffer, frame_buf);
         }
       C
-            
+      
       builder.struct_name = 'FrameBuffer'
       
       builder.accessor :size, 'int'
