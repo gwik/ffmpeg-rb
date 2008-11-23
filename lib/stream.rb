@@ -102,6 +102,8 @@ module FFMPEG
     attr_accessor :pts
     attr_accessor :sync_pts
     
+    attr_reader :format_context
+    
     def initialize(format_context=nil)
       @format_context = format_context
       @next_pts = FFMPEG::NOPTS_VALUE

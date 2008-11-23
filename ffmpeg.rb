@@ -99,24 +99,35 @@ require File.dirname(__FILE__) + '/lib/image_scaler.rb'
 require 'pp'
 file = ARGV.shift
 input = FFMPEG::FormatContext.new file
+input_video_steam = input.video_stream
 
-puts
-puts "input streams:"
-input.streams.each do |stream|
-  dsp = "\t%2d %s time base: %f frame rate: %f" % [
-    stream.stream_index,
-    stream.codec_context.codec_type,
-    stream.time_base.to_f,
-    stream.r_frame_rate.to_f,
-  ]
-  
-  dsp += " size: #{stream.codec_context.width}x#{stream.codec_context.height}" if 
-    stream.codec_context.codec_type == :VIDEO
-    
-  puts dsp
+flv = FFMPEG::FormatContext.new 'out.flv', 'flv'
+mp4 = FFMPEG::FormatContext.new 'out.mp4', 'mp4'
+
+input.transcode_map do |stream_map|
+  stream_map.map input_video_steam,
+    flv.new_output_stream('flv', :bit_rate => 1000*1000, :width => 300, :height => 200)
+  stream_map.map input_video_steam,
+    mp4.new_output_stream('mpeg4', :bit_rate => 1000*1000, :width => 640, :height => 480, :gop_size => 12)
 end
-puts
-puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
-puts
 
-input.transcode 'mp4', 'mpeg4', 'mp3', "out.mp4"
+# puts
+# puts "input streams:"
+# input.streams.each do |stream|
+#   dsp = "\t%2d %s time base: %f frame rate: %f" % [
+#     stream.stream_index,
+#     stream.codec_context.codec_type,
+#     stream.time_base.to_f,
+#     stream.r_frame_rate.to_f,
+#   ]
+#   
+#   dsp += " size: #{stream.codec_context.width}x#{stream.codec_context.height}" if 
+#     stream.codec_context.codec_type == :VIDEO
+#     
+#   puts dsp
+# end
+# puts
+# puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
+# puts
+# 
+# input.transcode 'mp4', 'mpeg4', 'mp3', "out.mp4"

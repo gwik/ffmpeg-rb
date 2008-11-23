@@ -495,6 +495,32 @@ module FFMPEG
       end
     end
     
+    def transcode_map(&block)
+      stream_map = StreamMap.new(self)
+      yield stream_map
+      raise RuntimeError.new("map is empty !") if stream_map.empty?
+      # TODO do prep and transcode
+    end
+    
+    # output only
+    def new_output_video_stream(codec_name=nil, options={})
+      stream = new_output_stream
+      stream.context_defaults FFMPEG::Codec::VIDEO
+      
+      codec_id = guess_codec codec_name, nil, filename, FFMPEG::Codec::VIDEO
+      raise "Unable to get a codec : #{codec_name}" unless codec_id
+      
+      encoder = stream.codec_context
+      
+      options.keys.each do |key|
+        method = "#{key}=".to_sym
+        stream.send(method, options[key]) if stream.respond_to?(:method)
+        encoder.send(method, options[key]) if encoder.respond_to(:method)
+      end
+      
+      stream
+    end
+    
     def transcode(wrapper, video, audio, io)
       @scaler = nil
       @in_frame = nil
