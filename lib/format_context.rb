@@ -376,7 +376,7 @@ module FFMPEG
       else
         @stream_info = true
         
-        output_format = FFMPEG::OutputFormat.guess_format output, nil, nil
+        output_format = FFMPEG::OutputFormat.guess_format nil, file, nil
         
         self.oformat = output_format
         #self.filename = file # HACK av_strlcpy
@@ -567,7 +567,7 @@ module FFMPEG
           
           encoder.open Codec.for_encoder(encoder.codec_id)
           
-          if encoder.type == :VIDEO
+          if encoder.codec_type == :VIDEO
             
             # TODO preserve ratio if width or height provided
             if encoder.width == 0
@@ -599,20 +599,19 @@ module FFMPEG
       stream = new_output_stream
       stream.context_defaults FFMPEG::Codec::VIDEO
       
-      codec_id = guess_codec codec_name, nil, filename, FFMPEG::Codec::VIDEO
+      codec_id = output_format.guess_codec codec_name, nil, filename, FFMPEG::Codec::VIDEO
       raise "Unable to get a codec : #{codec_name}" unless codec_id
       
       encoder = stream.codec_context
       
       options.keys.each do |key|
         method = "#{key}=".to_sym
-        stream.send(method, options[key]) if stream.respond_to?(:method)
-        encoder.send(method, options[key]) if encoder.respond_to(:method)
+        stream.send(method, options[key]) if stream.respond_to?(method)
+        encoder.send(method, options[key]) if encoder.respond_to?(method)
       end
       
       stream
     end
-    
     
     def transcode(wrapper, video, audio, io)
       @scaler = nil

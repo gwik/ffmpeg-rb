@@ -115,5 +115,9 @@ module FFMPEG
       "#<%s:%x %s>" % [self.class, object_id, codec_context.codec_type]
     end
     
+    def type
+      codec_context.codec_type
+    end
+    
   end
 end
