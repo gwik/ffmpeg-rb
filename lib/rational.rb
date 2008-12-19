@@ -45,7 +45,7 @@ module FFMPEG
         }
       C
       
-      builder.c <<-C
+      builder.c_singleton <<-C
         VALUE allocate() {
           AVRational *rational;
           
@@ -62,24 +62,14 @@ module FFMPEG
         }
       C
       
-      ##
-      # :method: initialize
-      
-      builder.c <<-C
-        VALUE initialize(int num, int den) {
-          AVRational * rational;
-          Data_Get_Struct(self, AVRational, rational);
-          
-          rational->num = num;
-          rational->den = den;
-          
-          return self;
-        }
-      C
-      
       builder.struct_name = 'AVRational'
       builder.accessor :den, 'int'
       builder.accessor :num, 'int'
+    end
+    
+    def initialize(num, den)
+      self.num = num
+      self.den = den
     end
     
     def self.rescale_q(a, bq, cq)

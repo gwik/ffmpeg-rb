@@ -195,6 +195,21 @@ module FFMPEG
       C
       
       ##
+      # :method: time_base=
+      
+      builder.c <<-C
+        VALUE time_base_equals(VALUE value) {
+          AVCodecContext * codec_context;
+          Data_Get_Struct(self, AVCodecContext, codec_context);
+        
+          codec_context->time_base.num = FIX2INT(rb_funcall(value, rb_intern("num"), 0));
+          codec_context->time_base.den = FIX2INT(rb_funcall(value, rb_intern("den"), 0));
+        
+          return ffmpeg_rat2obj(&(codec_context->time_base));
+        }
+      C
+      
+      ##
       # :method: defaults
       
       builder.c <<-C
@@ -203,6 +218,14 @@ module FFMPEG
           Data_Get_Struct(self, AVCodecContext, pointer);
           
           avcodec_get_context_defaults2(pointer, pointer->codec_type);
+          
+          if (pointer->pix_fmts) {
+            pointer->pix_fmts;
+            while(pix->fmts)
+            
+          }
+            
+          
           return self;
         }
       C

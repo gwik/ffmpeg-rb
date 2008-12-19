@@ -226,7 +226,7 @@ module FFMPEG
           obj = Data_Wrap_Struct(stream_klass, NULL, NULL, stream);
           
           rb_iv_set(obj, "@stream_info", Qtrue);
-          rb_funcall(obj, rb_intern("initialize"), 0);
+          rb_funcall(obj, rb_intern("initialize"), 1, self);
           
           return obj;
         }
@@ -501,7 +501,7 @@ module FFMPEG
       raise RuntimeError.new("map is empty !") if stream_map.empty?
       
       # TODO do prep and transcode
-      stream_map.ouput_format_contexts.each do |output_context|
+      stream_map.output_format_contexts.each do |output_context|
         output_context.write_header
       end
       
@@ -603,12 +603,15 @@ module FFMPEG
       raise "Unable to get a codec : #{codec_name}" unless codec_id
       
       encoder = stream.codec_context
+      encoder.defaults
       
       options.keys.each do |key|
         method = "#{key}=".to_sym
         stream.send(method, options[key]) if stream.respond_to?(method)
         encoder.send(method, options[key]) if encoder.respond_to?(method)
       end
+      
+      encoder.open(Codec.for_encoder(codec_id))
       
       stream
     end

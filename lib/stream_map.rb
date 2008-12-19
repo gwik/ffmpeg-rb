@@ -19,7 +19,7 @@ module FFMPEG
     end
     
     def add(in_stream, out_stream)
-      raise InvalidMap.new("stream type differs") unless in_stream.type != out_stream.type
+      raise InvalidMap.new("stream type differs") unless in_stream.type == out_stream.type
       raise InvalidMap.new("invalid stream : no format context") unless
         out_stream.format_context
       raise InvalidMap.new("input stream must belongs to input format context") unless
@@ -27,7 +27,7 @@ module FFMPEG
       
       @output_format_contexts << out_stream.format_context unless
         @output_format_contexts.include?(out_stream.format_context)
-      (@map[in_stream.index] ||= []) << out_stream
+      (@map[in_stream.stream_index] ||= []) << out_stream
     end
     
     def empty?

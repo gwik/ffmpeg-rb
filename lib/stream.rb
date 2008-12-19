@@ -64,6 +64,23 @@ module FFMPEG
           return ffmpeg_rat2obj(r_frame_rate);
         }
       C
+
+      ##
+      # :method: r_frame_rate=
+
+      builder.c <<-C
+        
+        VALUE r_frame_rate_equals(VALUE value) {
+          AVStream *stream;
+          Data_Get_Struct(self, AVStream, stream);
+
+          stream->r_frame_rate.num = FIX2INT(rb_funcall(value, rb_intern("num"), 0));
+          stream->r_frame_rate.den = FIX2INT(rb_funcall(value, rb_intern("den"), 0));
+
+          return ffmpeg_rat2obj(&(stream->r_frame_rate));
+        }
+        
+      C
       
       ##
       # :method: time_base
@@ -81,6 +98,20 @@ module FFMPEG
         }
       C
       
+      ##
+      # :method: time_base=
+      
+      builder.c <<-C
+        VALUE time_base_equals(VALUE value) {
+          AVStream *stream;
+          Data_Get_Struct(self, AVStream, stream);
+        
+          stream->time_base.num = FIX2INT(rb_funcall(value, rb_intern("num"), 0));
+          stream->time_base.den = FIX2INT(rb_funcall(value, rb_intern("den"), 0));
+        
+          return ffmpeg_rat2obj(&(stream->time_base));
+        }
+      C
       
       builder.struct_name = 'AVStream'
       builder.accessor :id,           'int'
