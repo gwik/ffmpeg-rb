@@ -219,15 +219,45 @@ module FFMPEG
           
           avcodec_get_context_defaults2(pointer, pointer->codec_type);
           
-          if (pointer->pix_fmts) {
-            pointer->pix_fmts;
-            while(pix->fmts)
-            
-          }
-            
-          
           return self;
         }
+      C
+      
+      builder.c <<-C
+        VALUE fps_equals(VALUE fps_rational)
+        {
+          
+          AVRational * fps;
+          AVRational recalc_fps;
+          
+          AVCodecContext *codec_context;
+          
+          Data_Get_Struct(fps_rational, AVRational, fps);
+          Data_Get_Struct(self, AVCodecContext, codec_context);
+          
+          recalc_fps.den = fps->den;
+          recalc_fps.num = fps->num;
+          
+          AVCodec * codec = codec_context->codec;
+          
+          if (codec && codec->supported_framerates)
+            recalc_fps = codec->supported_framerates[av_find_nearest_q_idx(recalc_fps, codec->supported_framerates)];
+          
+          codec_context->time_base.den = recalc_fps.num;
+          codec_context->time_base.num = recalc_fps.den;
+          
+          return ffmpeg_rat2obj(&(codec_context->time_base));
+        }
+      C
+      
+      builder.c <<-C
+        VALUE fps()
+        {
+          AVCodecContext *pointer;
+          Data_Get_Struct(self, AVCodecContext, pointer);
+          return ffmpeg_rat2obj(&(pointer->time_base));
+        }
+        
       C
       
       builder.struct_name = 'AVCodecContext'
@@ -241,12 +271,11 @@ module FFMPEG
       builder.accessor :rc_initial_buffer_occupancy, 'int'
       builder.accessor :width,                       'int'
       builder.accessor :max_b_frames,                'int'
+      builder.accessor :codec_id,                    'int'
       
       builder.reader :channels,    'int'
-      builder.reader :codec_id,    'int'
       builder.reader :_codec_type, 'int', :codec_type
       builder.reader :sample_rate, 'int'
-      
       
       builder.reader :codec_name, 'char *'
     end

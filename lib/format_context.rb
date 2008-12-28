@@ -605,13 +605,24 @@ module FFMPEG
       encoder = stream.codec_context
       encoder.defaults
       
-      options.keys.each do |key|
+      (options.keys & [:bit_rate, :width, :height]).each do |key|
+        puts "setting #{key}"
         method = "#{key}=".to_sym
         stream.send(method, options[key]) if stream.respond_to?(method)
         encoder.send(method, options[key]) if encoder.respond_to?(method)
       end
       
-      encoder.open(Codec.for_encoder(codec_id))
+      codec = Codec.for_encoder(codec_id)
+      p codec.pix_fmts
+      
+      encoder.codec_id = codec_id
+      encoder.open(codec)
+      
+      options.keys.each do |key|
+        method = "#{key}=".to_sym
+        stream.send(method, options[key]) if stream.respond_to?(method)
+        encoder.send(method, options[key]) if encoder.respond_to?(method)
+      end
       
       stream
     end
