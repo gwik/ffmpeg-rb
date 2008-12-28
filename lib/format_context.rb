@@ -531,7 +531,7 @@ module FFMPEG
         
         break :fail if input_packet.pts == NOPTS_VALUE
         # STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
-        stream_map.map[packet.stream_index].each do |output_stream|
+        stream_map.map[input_packet.stream_index].each do |output_stream|
           output input_packet, output_stream.format_context, output_stream, streams[input_packet.stream_index]
         end
       end
@@ -601,19 +601,22 @@ module FFMPEG
       
       codec_id = output_format.guess_codec codec_name, nil, filename, FFMPEG::Codec::VIDEO
       raise "Unable to get a codec : #{codec_name}" unless codec_id
+      codec = Codec.for_encoder(codec_id)
       
       encoder = stream.codec_context
       encoder.defaults
       
       (options.keys & [:bit_rate, :width, :height]).each do |key|
-        puts "setting #{key}"
         method = "#{key}=".to_sym
-        stream.send(method, options[key]) if stream.respond_to?(method)
-        encoder.send(method, options[key]) if encoder.respond_to?(method)
+        value = options.delete(key)
+        raise "required options #{key} not set" if value.nil?
+        stream.send(method, value) if stream.respond_to?(method)
+        encoder.send(method, value) if encoder.respond_to?(method)
       end
       
-      codec = Codec.for_encoder(codec_id)
-      p codec.pix_fmts
+      encoder.pix_fmt = options.delete(:pixel_format) || codec.pix_fmts[0]
+      encoder.fps = options.delete(:fps) || Rational.new(25,1)
+      encoder.bit_rate_tolerance = options.delete(:bit_rate_tolerance) || encoder.bit_rate * 10 / 100
       
       encoder.codec_id = codec_id
       encoder.open(codec)

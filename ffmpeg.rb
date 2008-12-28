@@ -105,8 +105,13 @@ input_video_steam = input.video_stream
 flv = FFMPEG::FormatContext.new 'out.flv', true
 mp4 = FFMPEG::FormatContext.new 'out.mp4', true
 
-flv_stream = flv.new_output_video_stream('flv', :bit_rate => 1000*1000, :width => 300, :height => 200, :time_base => FFMPEG::Rational.new(1, 25))
-mp4_stream = mp4.new_output_video_stream('mpeg4', :bit_rate => 1000*1000, :width => 640, :height => 480, :gop_size => 12, :time_base => FFMPEG::Rational.new(1, 25))
+flv_stream = flv.new_output_video_stream('flv', :bit_rate => 1000*1000,
+  :width => 300, :height => 200,
+  :time_base => FFMPEG::Rational.new(1, 25))
+
+mp4_stream = mp4.new_output_video_stream('mpeg4', :bit_rate => 1000*1000,
+  :width => 640, :height => 480,
+  :gop_size => 12, :time_base => FFMPEG::Rational.new(1, 25))
 
 input.transcode_map do |stream_map|
   stream_map.add input_video_steam, flv_stream

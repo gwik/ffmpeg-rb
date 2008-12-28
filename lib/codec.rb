@@ -106,16 +106,16 @@ module FFMPEG
       C
       
       builder.c <<-C
-        static VALUE pix_fmts()
+        VALUE pix_fmts()
         {
           AVCodec * codec;
           Data_Get_Struct(self, AVCodec, codec);
           
-          VALUE a = rb_ary_new();
+          volatile VALUE a = rb_ary_new();
           
-          if(codec && codec->pix_fmts){
-            const enum PixelFormat *p= codec->pix_fmts;
-            for(; *p!=-1; p++){
+          if(codec && codec->pix_fmts) {
+            const enum PixelFormat * p = codec->pix_fmts;
+            for(; *p!=-1; p++)
               rb_ary_push(a, INT2FIX(*p));
           }
           
@@ -128,8 +128,6 @@ module FFMPEG
       
       builder.accessor :_type, 'int', :type
     end
-    
-    alias :pixel_formats :pix_fmts
     
     def initialize(codec_context=nil)
       @codec_context = codec_context
