@@ -21,43 +21,6 @@ module FFMPEG
       C
       
       ##
-      # :method: coded_frame
-      
-      builder.c <<-C
-        VALUE coded_frame() {
-          AVCodecContext *codec_context;
-          VALUE frame_klass;
-          VALUE frame = Qnil;
-          
-          Data_Get_Struct(self, AVCodecContext, codec_context);
-          
-          if (codec_context->coded_frame != NULL) {
-            frame_klass = rb_path2class("FFMPEG::Frame");
-            frame = build_from_avframe_no_free(codec_context->coded_frame);
-          }
-          
-          return frame;
-        }
-      C
-      
-      ##
-      # :method: decoder
-      
-      builder.c <<-C
-        VALUE decoder() {
-          VALUE codec_klass;
-          AVCodecContext *codec_context;
-          
-          Data_Get_Struct(self, AVCodecContext, codec_context);
-          
-          codec_klass = rb_path2class("FFMPEG::Codec");
-          
-          return rb_funcall(codec_klass, rb_intern("for_decoder"), 1,
-                            INT2NUM(codec_context->codec_id));
-        }
-      C
-      
-      ##
       # :method: encoder
       builder.c <<-C
         VALUE encoder() {
@@ -257,21 +220,35 @@ module FFMPEG
           Data_Get_Struct(self, AVCodecContext, pointer);
           return ffmpeg_rat2obj(&(pointer->time_base));
         }
-        
+      C
+      
+      builder.c <<-C
+        VALUE codec()
+        {
+          AVCodecContext *pointer;
+          Data_Get_Struct(self, AVCodecContext, pointer);
+          
+          volatile VALUE codec_klass = rb_path2class("FFMPEG::Codec");
+          
+          if (pointer->codec == NULL)
+            return Qnil;
+          
+          return Data_Wrap_Struct(codec_klass, 0, 0, pointer->codec);
+        }
       C
       
       builder.struct_name = 'AVCodecContext'
       
       builder.accessor :bit_rate,                    'int'
       builder.accessor :bit_rate_tolerance,          'int'
-      builder.accessor :height,                      'int'
+      builder.accessor :width,                       'int'
       builder.accessor :pix_fmt,                     'int'
       builder.accessor :gop_size,                    'int'
       builder.accessor :rc_buffer_size,              'int'
       builder.accessor :rc_initial_buffer_occupancy, 'int'
-      builder.accessor :width,                       'int'
       builder.accessor :max_b_frames,                'int'
       builder.accessor :codec_id,                    'int'
+      builder.accessor :height,                      'int'
       
       builder.reader :channels,    'int'
       builder.reader :_codec_type, 'int', :codec_type
@@ -284,12 +261,22 @@ module FFMPEG
       private :new
     end
     
+    alias :pixel_format :pix_fmt
+    
     def initialize(stream=nil)
       @stream = stream
     end
     
     def codec_type
       FFMPEG::Codec.type_name _codec_type
+    end
+    
+    def encoder
+      FFMPEG::Codec.for_encoder(codec_id)
+    end
+    
+    def decoder
+      FFMPEG::Codec.for_decoder(codec_id)
     end
     
     def inspect
@@ -301,5 +288,6 @@ module FFMPEG
         time_base
       ]
     end
+    
   end
 end

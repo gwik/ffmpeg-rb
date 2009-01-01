@@ -500,6 +500,8 @@ module FFMPEG
       yield stream_map
       raise RuntimeError.new("map is empty !") if stream_map.empty?
       
+      prepare_transcoding(stream_map)
+      
       # TODO do prep and transcode
       stream_map.output_format_contexts.each do |output_context|
         output_context.write_header
@@ -532,15 +534,16 @@ module FFMPEG
         break :fail if input_packet.pts == NOPTS_VALUE
         # STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
         stream_map.map[input_packet.stream_index].each do |output_stream|
-          output input_packet, output_stream.format_context, output_stream, streams[input_packet.stream_index]
+          output input_packet, output_stream.format_context, output_stream,
+            streams[input_packet.stream_index]
         end
       end
       
       output_context.write_trailer
     end
     
-    def prepare_transcoding(map)
-      stream_map.map.keys.each_pair do |index, output_streams|
+    def prepare_transcoding(stream_map)
+      stream_map.map.each_pair do |index, output_streams|
         # prepare input stream
         input_stream = streams[index]
         decoder = input_stream.codec_context
@@ -565,7 +568,7 @@ module FFMPEG
             video_stream.time_base, output_video_stream.time_base) if 
               output_stream.duration.zero?
           
-          encoder.open Codec.for_encoder(encoder.codec_id)
+          # encoder.open Codec.for_encoder(encoder.codec_id)
           
           if encoder.codec_type == :VIDEO
             
@@ -575,7 +578,7 @@ module FFMPEG
               encoder.height = decoder.heigth
             end
             
-            encoder.sample_aspect_ratio.num = 4/3 * encoder.width/encoder.heigth
+            encoder.sample_aspect_ratio.num = 4/3 * encoder.width / encoder.heigth
             encoder.sample_aspect_ratio.den = 255
             
             encoder.bit_rate_tolerance = 0.2 * encoder.bit_rate if
