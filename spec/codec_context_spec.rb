@@ -5,7 +5,7 @@ describe FFMPEG::CodecContext do
   describe "video input stream codec context" do
     
     before :each do
-      @iformat = FFMPEG::FormatContext.new(File.dirname(__FILE__) + '/../in.mpeg')
+      @iformat = FFMPEG::FormatContext.new($test_file)
       @codec_context = @iformat.video_stream.codec_context
     end
     
@@ -63,9 +63,9 @@ describe FFMPEG::CodecContext do
         @codec_context.codec_type.should == :VIDEO
       end
       
-      it "has a non-zero fps" do
-        @codec_context.should respond_to(:fps)
-        @codec_context.fps.should be_instance_of(FFMPEG::Rational)
+      it "has a non-zero time base" do
+        @codec_context.should respond_to(:time_base)
+        @codec_context.time_base.should be_instance_of(FFMPEG::Rational)
       end
       
     end

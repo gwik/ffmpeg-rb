@@ -482,11 +482,11 @@ module FFMPEG
                                       FFMPEG::ImageScaler::BICUBIC
         
         output_stream.sync_pts = input_stream.pts / TIME_BASE.to_f / output_stream.codec_context.time_base.to_f
-                                                
+        
         output_packet = output_context.encode_frame @scaler.scale(@in_frame), output_stream
         
         # STDERR.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
-         
+        
         if output_packet.size > 0 then
           output_context.interleaved_write output_packet
         end
@@ -539,7 +539,9 @@ module FFMPEG
         end
       end
       
-      output_context.write_trailer
+      stream_map.output_format_contexts.each do |output_context|
+        output_context.write_trailer
+      end
     end
     
     def prepare_transcoding(stream_map)
@@ -551,7 +553,7 @@ module FFMPEG
         video_stream.pts = 0
         video_stream.next_pts = FFMPEG::NOPTS_VALUE
         
-        decoder.open Codec.for_decoder(decoder.codec_id)
+        decoder.open decoder.decoder
         
         # prepare output streams
         output_streams.each do |output_stream|
@@ -578,13 +580,13 @@ module FFMPEG
               encoder.height = decoder.heigth
             end
             
-            encoder.sample_aspect_ratio.num = 4/3 * encoder.width / encoder.heigth
-            encoder.sample_aspect_ratio.den = 255
+            # encoder.sample_aspect_ratio.num = (4/3) * encoder.width / encoder.height
+            # encoder.sample_aspect_ratio.den = 255
             
             encoder.bit_rate_tolerance = 0.2 * encoder.bit_rate if
               encoder.bit_rate_tolerance.zero?
             
-            encoder.pix_fmt = decoder.pix_fmt if video_encoder.pix_fmt == -1
+            encoder.pix_fmt = decoder.pix_fmt if encoder.pix_fmt == -1
             
             unless encoder.rc_initial_buffer_occupancy > 1 then
               encoder.rc_initial_buffer_occupancy =

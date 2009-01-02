@@ -214,15 +214,6 @@ module FFMPEG
       C
       
       builder.c <<-C
-        VALUE fps()
-        {
-          AVCodecContext *pointer;
-          Data_Get_Struct(self, AVCodecContext, pointer);
-          return ffmpeg_rat2obj(&(pointer->time_base));
-        }
-      C
-      
-      builder.c <<-C
         VALUE codec()
         {
           AVCodecContext *pointer;
@@ -234,6 +225,26 @@ module FFMPEG
             return Qnil;
           
           return Data_Wrap_Struct(codec_klass, 0, 0, pointer->codec);
+        }
+      C
+      
+      ##
+      # :method: coded_frame
+      
+      builder.c <<-C
+        VALUE coded_frame() {
+          AVCodecContext *codec_context;
+          VALUE frame_klass;
+          VALUE frame = Qnil;
+          
+          Data_Get_Struct(self, AVCodecContext, codec_context);
+          
+          if (codec_context->coded_frame != NULL) {
+            frame_klass = rb_path2class("FFMPEG::Frame");
+            frame = build_from_avframe_no_free(codec_context->coded_frame);
+          }
+          
+          return frame;
         }
       C
       

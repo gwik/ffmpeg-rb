@@ -14,7 +14,7 @@ namespace :spec do
     t.spec_files = FileList['spec/**/*_spec.rb']
   end
   
-  desc "run specs"
+  desc "run specs, specify TEST_FILE environment variable"
   Spec::Rake::SpecTask.new(:spec) do |t|
     t.spec_files = FileList["spec/**/*_spec.rb"]
   end

@@ -97,8 +97,23 @@ require File.dirname(__FILE__) + '/lib/codec.rb'
 require File.dirname(__FILE__) + '/lib/image_scaler.rb'
 require File.dirname(__FILE__) + '/lib/stream_map.rb'
 
-if __FILE__ == $0
+if %w(on y yes yeah true 1).include?(ENV['DEBUG'].to_s.downcase)
+  
+  begin
+    require 'ruby-debug'
+    Debugger.start
+    Debugger.settings[:autoeval] = true if Debugger.respond_to?(:settings)
+    puts "=> Debugger enabled"
+  rescue LoadError
+    STDERR.puts "=> error : not able to load ruby debug"
+  end
+  
+end
 
+
+if __FILE__ == $0
+  
+  
   require 'pp'
   file = ARGV.shift
   input = FFMPEG::FormatContext.new file
