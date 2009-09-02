@@ -462,8 +462,7 @@ class FFMPEG::FormatContext
        @in_frame.defaults
        @in_frame.quality = input_stream.quality
 
-       got_picture, bytes = video_decoder.decode_video @in_frame,
-         packet.buffer
+       got_picture, bytes = video_decoder.decode_video @in_frame, packet
 
        break :fail if bytes.nil?
 

@@ -41,25 +41,23 @@ class FFMPEG::CodecContext
     # :method: decode_video
 
     builder.c <<-C
-      VALUE decode_video(VALUE picture, VALUE buffer) {
+      VALUE decode_video(VALUE picture, VALUE packet) {
         AVCodecContext *codec_context;
         AVFrame *frame;
+        AVPacket *pkt;
         volatile VALUE ret;
         int got_picture = 0;
         int buf_used;
 
-        if (NIL_P(buffer))
+        if (NIL_P(pkt))
           return Qnil;
-
-        FrameBuffer * buf;
-        Data_Get_Struct(buffer, FrameBuffer, buf);
 
         Data_Get_Struct(self, AVCodecContext, codec_context);
         Data_Get_Struct(picture, AVFrame, frame);
+        Data_Get_Struct(packet, AVPacket, pkt);
 
-        buf_used = avcodec_decode_video(codec_context, frame, &got_picture,
-                                        buf->buf,
-                                        buf->size);
+        buf_used = avcodec_decode_video2(codec_context, frame, &got_picture,
+                                         pkt);
 
         ret = rb_ary_new();
         rb_ary_push(ret, INT2NUM(got_picture));
