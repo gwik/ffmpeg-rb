@@ -6,7 +6,7 @@ require 'inline'
 
 module FFMPEG
 
-  VERSION = '0.0.1'
+  VERSION = '1.0'
 
   class Rational; end
 
@@ -83,22 +83,21 @@ module FFMPEG
 
 end
 
-require File.dirname(__FILE__) + '/lib/rational.rb'
-require File.dirname(__FILE__) + '/lib/frame_buffer.rb'
-require File.dirname(__FILE__) + '/lib/format_context.rb'
-require File.dirname(__FILE__) + '/lib/format_parameters.rb'
-require File.dirname(__FILE__) + '/lib/frame.rb'
-require File.dirname(__FILE__) + '/lib/input_format.rb'
-require File.dirname(__FILE__) + '/lib/output_format.rb'
-require File.dirname(__FILE__) + '/lib/packet.rb'
-require File.dirname(__FILE__) + '/lib/stream.rb'
-require File.dirname(__FILE__) + '/lib/codec_context.rb'
-require File.dirname(__FILE__) + '/lib/codec.rb'
-require File.dirname(__FILE__) + '/lib/image_scaler.rb'
-require File.dirname(__FILE__) + '/lib/stream_map.rb'
+require 'ffmpeg/rational'
+require 'ffmpeg/frame_buffer'
+require 'ffmpeg/format_context'
+require 'ffmpeg/format_parameters'
+require 'ffmpeg/frame'
+require 'ffmpeg/input_format'
+require 'ffmpeg/output_format'
+require 'ffmpeg/packet'
+require 'ffmpeg/stream'
+require 'ffmpeg/codec_context'
+require 'ffmpeg/codec'
+require 'ffmpeg/image_scaler'
+require 'ffmpeg/stream_map'
 
 if %w(on y yes yeah true 1).include?(ENV['DEBUG'].to_s.downcase)
-  
   begin
     require 'ruby-debug'
     Debugger.start
@@ -107,29 +106,25 @@ if %w(on y yes yeah true 1).include?(ENV['DEBUG'].to_s.downcase)
   rescue LoadError
     STDERR.puts "=> error : not able to load ruby debug"
   end
-  
 end
 
-
 if __FILE__ == $0
-  
-  
   require 'pp'
   file = ARGV.shift
   input = FFMPEG::FormatContext.new file
   input_video_steam = input.video_stream
-  
+
   flv = FFMPEG::FormatContext.new 'out.flv', true
   mp4 = FFMPEG::FormatContext.new 'out.mp4', true
-  
+
   flv_stream = flv.new_output_video_stream('flv', :bit_rate => 1000*1000,
     :width => 300, :height => 200,
     :fps => FFMPEG::Rational.new(25, 1))
-  
+
   mp4_stream = mp4.new_output_video_stream('mpeg4', :bit_rate => 2000*1000,
     :width => 640, :height => 480,
     :gop_size => 12, :fps => FFMPEG::Rational.new(25,1))
-  
+
   input.transcode_map do |stream_map|
 #    stream_map.add input_video_steam, flv_stream
     stream_map.add input_video_steam, mp4_stream
@@ -145,16 +140,17 @@ if __FILE__ == $0
   #     stream.time_base.to_f,
   #     stream.r_frame_rate.to_f,
   #   ]
-  # 
-  #   dsp += " size: #{stream.codec_context.width}x#{stream.codec_context.height}" if 
+  #
+  #   dsp += " size: #{stream.codec_context.width}x#{stream.codec_context.height}" if
   #     stream.codec_context.codec_type == :VIDEO
-  #   
+  #
   #   puts dsp
   # end
   # puts
   # puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
   # puts
-  # 
+  #
   # input.transcode 'mp4', 'mpeg4', 'mp3', "out.mp4"
 
 end
+

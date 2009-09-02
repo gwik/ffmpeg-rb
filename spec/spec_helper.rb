@@ -1,5 +1,5 @@
-require File.dirname(__FILE__) + '/../ffmpeg'
 require 'rubygems'
 require 'spec'
+require 'ffmpeg'
 
-$test_file = ENV['TEST_FILE'] || File.dirname(__FILE__) + '/../in.mpeg'
+$test_file = ENV['TEST_FILE'] || File.join('spec', 'Thumbs Up!.3gp')

@@ -1,0 +1,23 @@
+History.txt
+Manifest.txt
+README.txt
+Rakefile
+TODO
+lib/ffmpeg.rb
+lib/ffmpeg/codec.rb
+lib/ffmpeg/codec_context.rb
+lib/ffmpeg/format_context.rb
+lib/ffmpeg/format_parameters.rb
+lib/ffmpeg/frame.rb
+lib/ffmpeg/frame_buffer.rb
+lib/ffmpeg/image_scaler.rb
+lib/ffmpeg/input_format.rb
+lib/ffmpeg/output_format.rb
+lib/ffmpeg/packet.rb
+lib/ffmpeg/rational.rb
+lib/ffmpeg/stream.rb
+lib/ffmpeg/stream_map.rb
+spec/Thumbs Up!.3gp
+spec/codec_context_spec.rb
+spec/codec_spec.rb
+spec/spec_helper.rb
