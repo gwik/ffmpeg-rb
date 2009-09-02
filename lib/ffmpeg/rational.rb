@@ -1,4 +1,7 @@
 class FFMPEG::Rational
+
+  include Comparable
+
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
@@ -76,6 +79,12 @@ class FFMPEG::Rational
     c = cq.num * bq.den
 
     rescale_rnd a, b, c, ROUND_NEAR_INF
+  end
+
+  def <=>(other)
+    return nil unless self.class === other
+
+    to_f <=> other.to_f
   end
 
   def inspect

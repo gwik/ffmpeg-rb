@@ -5,10 +5,13 @@ require 'spec/rake/spectask'
 
 Hoe.plugin :git
 Hoe.plugin :email
+Hoe.plugin :minitest
 
 Hoe.spec 'ffmpeg' do
   developer 'Eric Hodel', 'drbrain@segment7.net'
   developer 'Antonin Amand', 'antonin.amand@gmail.com'
+
+  self.testlib = 'minitest'
 
   clean_globs << File.join(File.expand_path('~'), '.ruby_inline/Inline_FFMPEG*')
 end

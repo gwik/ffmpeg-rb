@@ -3,7 +3,7 @@ class FFMPEG::Codec
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
-    CONSTS = [
+    TYPE_CONSTS = [
       [:UNKNOWN,    :CODEC_TYPE_UNKNOWN,    :int],
       [:VIDEO,      :CODEC_TYPE_VIDEO,      :int],
       [:AUDIO,      :CODEC_TYPE_AUDIO,      :int],
@@ -13,18 +13,19 @@ class FFMPEG::Codec
       [:NB,         :CODEC_TYPE_NB,         :int],
     ]
 
-    CONSTS.each do |name, c_name, c_type|
+    TYPE_CONSTS.each do |name, c_name, c_type|
       builder.map_c_const c_name => [c_type, name]
     end
 
     def self.type_name(type)
-      CONSTS.find do |name, c_name, c_type|
+      TYPE_CONSTS.find do |name, c_name, c_type|
         type == self.const_get(name)
       end.first
     end
 
     ##
     # :singleton-method: for_decoder
+
     builder.c_singleton <<-C
       VALUE for_decoder(VALUE codec_id_or_name) {
         AVCodec *codec;
@@ -105,17 +106,35 @@ class FFMPEG::Codec
       }
     C
 
+    ##
+    # :method: next
+
     builder.c <<-C
-      VALUE pix_fmts()
-      {
-        AVCodec * codec;
+      VALUE next() {
+        AVCodec *codec;
+
         Data_Get_Struct(self, AVCodec, codec);
 
-        volatile VALUE a = rb_ary_new();
+        return Data_Wrap_Struct(CLASS_OF(self), NULL, NULL, codec->next);
+      }
+    C
 
-        if(codec && codec->pix_fmts) {
+    ##
+    # :method: pixel_formats
+
+    builder.c <<-C
+      VALUE pixel_formats() {
+        AVCodec * codec;
+        volatile VALUE a = Qnil;
+
+        Data_Get_Struct(self, AVCodec, codec);
+
+        if (codec && codec->pix_fmts) {
           const enum PixelFormat * p = codec->pix_fmts;
-          for(; *p!=-1; p++)
+
+          a = rb_ary_new();
+
+          for(; *p != -1; p++)
             rb_ary_push(a, INT2FIX(*p));
         }
 
@@ -123,10 +142,58 @@ class FFMPEG::Codec
       }
     C
 
-    builder.struct_name = 'AVCodec'
-    builder.accessor :name, 'char *'
+    ##
+    # :method: supported_framerates
 
+    builder.c <<-C
+      VALUE supported_framerates()
+      {
+        AVCodec * codec;
+        volatile VALUE a = Qnil;
+
+        Data_Get_Struct(self, AVCodec, codec);
+
+        if (codec && codec->supported_framerates) {
+          int i = 0;
+          AVRational p, *framerate;
+          a = rb_ary_new();
+
+          for(;; i++) {
+            p = codec->supported_framerates[i];
+
+            if (p.num == 0 && p.den == 0)
+              break;
+
+            framerate = av_mallocz(sizeof(AVRational));
+            framerate->num = p.num;
+            framerate->den = p.den;
+            
+            rb_ary_push(a,
+                        Data_Wrap_Struct(rb_path2class("FFMPEG::Rational"),
+                                         NULL, NULL, framerate));
+          }
+        }
+
+        return a;
+      }
+    C
+
+    builder.struct_name = 'AVCodec'
+    builder.reader :id, 'int'
+    builder.reader :capabilities, 'int'
+
+    builder.accessor :name, 'char *'
+    builder.accessor :long_name, 'char *'
     builder.accessor :_type, 'int', :type
+
+    builder.map_c_const :CODEC_CAP_DRAW_HORIZ_BAND  => ['int', :DRAW_HORIZ_BAND]
+    builder.map_c_const :CODEC_CAP_DR1              => ['int', :DR1]
+    builder.map_c_const :CODEC_CAP_PARSE_ONLY       => ['int', :PARSE_ONLY]
+    builder.map_c_const :CODEC_CAP_TRUNCATED        => ['int', :TRUNCATED]
+    builder.map_c_const :CODEC_CAP_HWACCEL          => ['int', :HWACCEL]
+    builder.map_c_const :CODEC_CAP_DELAY            => ['int', :DELAY]
+    builder.map_c_const :CODEC_CAP_SMALL_LAST_FRAME => ['int', :SMALL_LAST_FRAME]
+    builder.map_c_const :CODEC_CAP_HWACCEL_VDPAU    => ['int', :HWACCEL_VDPAU]
   end
 
   def initialize(codec_context=nil)
