@@ -3,6 +3,8 @@ require 'ffmpeg_test_case'
 class TestFFMPEGCodec < FFMPEG::TestCase
 
   def setup
+    super
+
     @codec = FFMPEG::Codec.for_encoder 'mpeg1video'
   end
 
