@@ -91,7 +91,7 @@ module FFMPEG
           break;
         case AVERROR_NOENT:
           errno = ENOENT;
-          rb_sys_fail("No such file or directory");
+          rb_sys_fail("");
           break;
         case AVERROR_NOFMT:
           error_class = rb_path2class("FFMPEG::UnknownFormatError");
