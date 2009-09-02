@@ -323,9 +323,9 @@ class FFMPEG::FormatContext
 
     builder.c <<-C
       VALUE write_trailer() {
-        AVStream *stream;
-        Data_Get_Struct(self, AVStream, stream);
-        av_write_trailer(stream);
+        AVFormatContext *format_context;
+        Data_Get_Struct(self, AVFormatContext, format_context);
+        av_write_trailer(format_context);
 
         return self;
       }
