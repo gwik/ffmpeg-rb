@@ -153,7 +153,7 @@ require 'ffmpeg/image_scaler'
 require 'ffmpeg/stream_map'
 require 'ffmpeg/pixel_format'
 
-if %w(on y yes yeah true 1).include?(ENV['DEBUG'].to_s.downcase)
+if ENV['DEBUG'] then
   begin
     require 'ruby-debug'
     Debugger.start
