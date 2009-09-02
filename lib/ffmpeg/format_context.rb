@@ -432,8 +432,8 @@ class FFMPEG::FormatContext
     end
 
     #puts video_encoder.coded_frame.type.to_s
-    STDOUT.print "\rtime: #{format "%7.2f", output_stream.sync_pts * video_encoder.time_base.to_f} #{format "%10d", packet.pts} #{video_encoder.coded_frame.type}"
-    STDOUT.flush
+    #$stdout.print "\rtime: #{format "%7.2f", output_stream.sync_pts * video_encoder.time_base.to_f} #{format "%10d", packet.pts} #{video_encoder.coded_frame.type}"
+    #$stdout.flush
     packet
   end
 
@@ -488,7 +488,7 @@ class FFMPEG::FormatContext
 
        output_packet = output_context.encode_frame @scaler.scale(@in_frame), output_stream
 
-       # STDERR.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
+       # $stderr.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
 
        if output_packet.size > 0 then
          output_context.interleaved_write output_packet
@@ -535,7 +535,7 @@ class FFMPEG::FormatContext
       end
 
       break :fail if input_packet.pts == NOPTS_VALUE
-      # STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
+      # $stderr.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
       stream_map.map[input_packet.stream_index].each do |output_stream|
         output input_packet, output_stream.format_context, output_stream,
           streams[input_packet.stream_index]
@@ -772,7 +772,7 @@ class FFMPEG::FormatContext
       # end
 
       break :fail if input_packet.pts == NOPTS_VALUE
-      # STDERR.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
+      # $stderr.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
       output input_packet, output_context, output_context.video_stream, video_stream
     end
 

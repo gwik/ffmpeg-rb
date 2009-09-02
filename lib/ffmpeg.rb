@@ -153,14 +153,14 @@ require 'ffmpeg/image_scaler'
 require 'ffmpeg/stream_map'
 require 'ffmpeg/pixel_format'
 
-if ENV['DEBUG'] then
+if ENV['DEBUG_FFMPEG_RB'] then
   begin
     require 'ruby-debug'
     Debugger.start
     Debugger.settings[:autoeval] = true if Debugger.respond_to?(:settings)
     puts "=> Debugger enabled"
   rescue LoadError
-    STDERR.puts "=> error : not able to load ruby debug"
+    warn 'not able to load ruby debug'
   end
 end
 
