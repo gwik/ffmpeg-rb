@@ -53,7 +53,7 @@ class FFMPEG::FormatContext
       VALUE allocate() {
         AVFormatContext *format_context;
 
-        format_context = av_alloc_format_context();
+        format_context = avformat_alloc_context();
 
         VALUE obj = Data_Wrap_Struct(self, 0, free_format_context, format_context);
 
