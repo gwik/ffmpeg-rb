@@ -80,12 +80,13 @@ class FFMPEG::FormatContext
     builder.c <<-C, :method_name => :open
       VALUE oc_open(char *file_name, int flags) {
         AVFormatContext *format_context;
+        int e;
 
         Data_Get_Struct(self, AVFormatContext, format_context);
 
-        if (url_fopen(&format_context->pb, file_name, flags) < 0) {
-          rb_raise(rb_eRuntimeError, "could not open %s", file_name);
-        }
+        e = url_fopen(&format_context->pb, file_name, flags);
+
+        ffmpeg_check_error(e);
 
         return self;
       }
@@ -100,7 +101,7 @@ class FFMPEG::FormatContext
         AVFormatContext *format_context;
         AVInputFormat *input_format = NULL;
         AVFormatParameters *format_parameters = NULL;
-        int ret;
+        int e;
 
         Data_Get_Struct(self, AVFormatContext, format_context);
 
@@ -113,12 +114,10 @@ class FFMPEG::FormatContext
                           format_parameters);
         }
 
-        ret = av_open_input_file(&format_context, filename, input_format,
-                                 buf_size, format_parameters);
+        e = av_open_input_file(&format_context, filename, input_format,
+                               buf_size, format_parameters);
 
-        if (ret != 0) {
-          rb_raise(rb_eArgError, "error opening file (av_open_input_file)");
-        }
+        ffmpeg_check_error(e);
 
         DATA_PTR(self) = format_context;
 
@@ -146,13 +145,14 @@ class FFMPEG::FormatContext
       VALUE set_parameters(VALUE _params) {
         AVFormatParameters *format_parameters;
         AVFormatContext *format_context;
+        int e;
 
         Data_Get_Struct(self, AVFormatContext, format_context);
         Data_Get_Struct(_params, AVFormatParameters, format_parameters);
 
-        if (av_set_parameters(format_context, format_parameters) < 0) {
-          rb_raise(rb_eRuntimeError, "invalid encoding parameters");
-        }
+        e = av_set_parameters(format_context, format_parameters);
+
+        ffmpeg_check_error(e);
 
         return self;
       }
@@ -164,14 +164,16 @@ class FFMPEG::FormatContext
     builder.c <<-C
       VALUE stream_info() {
         AVFormatContext *format_context;
+        int e;
 
         if (RTEST(rb_iv_get(self, "@stream_info")))
            return Qtrue;
 
         Data_Get_Struct(self, AVFormatContext, format_context);
 
-        if (av_find_stream_info(format_context) < 0)
-          return Qfalse;
+        e = av_find_stream_info(format_context);
+
+        ffmpeg_check_error(e);
 
         rb_iv_set(self, "@stream_info", Qtrue);
 
@@ -193,9 +195,7 @@ class FFMPEG::FormatContext
 
         ret = av_interleaved_write_frame(format_context, packet);
 
-        if (ret < 0) {
-          rb_raise(rb_eRuntimeError, "av_interleaved_write_frame failed");
-        }
+        ffmpeg_check_error(ret);
 
         return INT2NUM(ret);
       }
@@ -253,15 +253,14 @@ class FFMPEG::FormatContext
       VALUE read_frame(VALUE rb_packet) {
         AVFormatContext *format_context;
         AVPacket *packet;
-        int err;
+        int e;
 
         Data_Get_Struct(self, AVFormatContext, format_context);
         Data_Get_Struct(rb_packet, AVPacket, packet);
 
-        err = av_read_frame(format_context, packet);
+        e = av_read_frame(format_context, packet);
 
-        if (err < 0)
-          return Qfalse;
+        ffmpeg_check_error(e);
 
         // refresh the buffer
         rb_funcall(rb_packet, rb_intern("buffer"), 0);
@@ -307,12 +306,13 @@ class FFMPEG::FormatContext
     builder.c <<-C
       VALUE write_header() {
         AVFormatContext *format_context;
+        int e;
 
         Data_Get_Struct(self, AVFormatContext, format_context);
 
-        if (av_write_header(format_context) < 0) {
-          rb_raise(rb_eRuntimeError, "could not write header for output file");
-        }
+        e = av_write_header(format_context);
+
+        ffmpeg_check_error(e);
 
         return self;
       }
@@ -324,8 +324,13 @@ class FFMPEG::FormatContext
     builder.c <<-C
       VALUE write_trailer() {
         AVFormatContext *format_context;
+        int e;
+
         Data_Get_Struct(self, AVFormatContext, format_context);
-        av_write_trailer(format_context);
+
+        e = av_write_trailer(format_context);
+
+        ffmpeg_check_error(e);
 
         return self;
       }

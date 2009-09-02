@@ -10,6 +10,15 @@ module FFMPEG
 
   class Error < RuntimeError; end
 
+  class IOError            < Error; end
+  class InvalidDataError   < Error; end
+  class NoMemError         < Error; end
+  class NotSupportedError  < Error; end
+  class NumExpectedError   < Error; end
+  class PatchWelcomeError  < Error; end
+  class UnknownError       < Error; end
+  class UnknownFormatError < Error; end
+
   class Rational; end
 
   def self.builder_defaults(builder)
@@ -65,6 +74,50 @@ module FFMPEG
         klass = rb_path2class("FFMPEG::Rational");
 
         return Data_Wrap_Struct(klass, 0, NULL, rational);
+      }
+
+      void ffmpeg_check_error(int e) {
+        VALUE error_class;
+        if (e >= 0) return;
+
+        switch (e) {
+        case AVERROR_EOF:
+          error_class = rb_eEOFError;
+          rb_raise(error_class, "end of file");
+          break;
+        case AVERROR_IO:
+          error_class = rb_path2class("FFMPEG::IOError");
+          rb_raise(error_class, "IO error");
+          break;
+        case AVERROR_NOENT:
+          errno = ENOENT;
+          rb_sys_fail("No such file or directory");
+          break;
+        case AVERROR_NOFMT:
+          error_class = rb_path2class("FFMPEG::UnknownFormatError");
+          rb_raise(error_class, "unknown format");
+          break;
+        case AVERROR_NOMEM:
+          error_class = rb_path2class("FFMPEG::NoMemError");
+          rb_raise(error_class, "not enough memory");
+          break;
+        case AVERROR_NOTSUPP:
+          error_class = rb_path2class("FFMPEG::NotSupportedError");
+          rb_raise(error_class, "operation not supported");
+          break;
+        case AVERROR_NUMEXPECTED:
+          error_class = rb_path2class("FFMPEG::NumExpectedError");
+          rb_raise(error_class, "number syntax expected in filename");
+          break;
+        case AVERROR_PATCHWELCOME:
+          error_class = rb_path2class("FFMPEG::PatchWelcomeError");
+          rb_raise(error_class, "not yet implemented in FFMPEG, patches welcome");
+          break;
+        case AVERROR_UNKNOWN:
+        default:
+          error_class = rb_path2class("FFMPEG::UnknownError");
+          rb_raise(error_class, "unknown error (%d)", e);
+        }
       }
     C
 

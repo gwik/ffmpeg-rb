@@ -103,7 +103,7 @@ class FFMPEG::CodecContext
       VALUE open(VALUE _codec) {
         AVCodecContext *codec_context;
         AVCodec *codec;
-        int err;
+        int e;
 
         VALUE iv_codec = rb_iv_get(self, "@codec");
         if (!NIL_P(iv_codec))
@@ -112,11 +112,9 @@ class FFMPEG::CodecContext
         Data_Get_Struct(self, AVCodecContext, codec_context);
         Data_Get_Struct(_codec, AVCodec, codec);
 
-        err = avcodec_open(codec_context, codec);
+        e = avcodec_open(codec_context, codec);
 
-        if (err < 0) {
-          rb_raise(rb_eRuntimeError, "error opening codec: %d.  Check bit_rate, rate, width, height", err);
-        }
+        ffmpeg_check_error(e);
 
         RDATA(_codec)->dfree = 0;
         rb_iv_set(self, "@codec", _codec);
