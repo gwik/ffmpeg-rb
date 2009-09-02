@@ -173,11 +173,11 @@ if __FILE__ == $0
   flv = FFMPEG::FormatContext.new 'out.flv', true
   mp4 = FFMPEG::FormatContext.new 'out.mp4', true
 
-  flv_stream = flv.new_output_video_stream('flv', :bit_rate => 1000*1000,
+  flv_stream = flv.new_output_video_stream('flv', :bit_rate => 1_000_000,
     :width => 300, :height => 200,
     :fps => FFMPEG::Rational.new(25, 1))
 
-  mp4_stream = mp4.new_output_video_stream('mpeg4', :bit_rate => 2000*1000,
+  mp4_stream = mp4.new_output_video_stream('mpeg4', :bit_rate => 2_000_000,
     :width => 640, :height => 480,
     :gop_size => 12, :fps => FFMPEG::Rational.new(25,1))
 
