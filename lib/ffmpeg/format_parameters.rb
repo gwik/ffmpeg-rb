@@ -1,6 +1,7 @@
 class FFMPEG::FormatParameters
   inline :C do |builder|
     FFMPEG.builder_defaults builder
+
     builder.prefix <<-C
       void free_format_parameters(AVFormatParameters* format_parameters)
       {
@@ -28,6 +29,21 @@ class FFMPEG::FormatParameters
       }
     C
 
+    FORMAT_PARAMETER_CONSTANTS = [
+      'AVFMT_GENERIC_INDEX',
+      'AVFMT_GLOBALHEADER',
+      'AVFMT_NEEDNUMBER',
+      'AVFMT_NOFILE',
+      'AVFMT_NOTIMESTAMPS',
+      'AVFMT_RAWPICTURE',
+      'AVFMT_SHOW_IDS',
+      'AVFMT_TS_DISCONT',
+      'AVFMT_VARIABLE_FPS',
+    ]
+
+    FORMAT_PARAMETER_CONSTANTS.each do |const|
+      builder.map_c_const const => ['int', conts.sub('AVFMT_', '')]
+    end
   end
 end
 
