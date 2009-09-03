@@ -83,9 +83,9 @@ class FFMPEG::Packet
         av_init_packet(packet);
         packet->data = NULL;
         packet->size = 0;
-        packet->pts   = AV_NOPTS_VALUE;
-        packet->dts   = AV_NOPTS_VALUE;
-        packet->pos   = -1;
+        packet->pts  = AV_NOPTS_VALUE;
+        packet->dts  = AV_NOPTS_VALUE;
+        packet->pos  = -1;
 
         return self;
       }
@@ -109,6 +109,10 @@ class FFMPEG::Packet
 
   def initialize
     clean
+  end
+
+  def inspect
+    '#<%s size: %d>' % [self.class.name, size]
   end
 
 end

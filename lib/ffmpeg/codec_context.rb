@@ -263,11 +263,11 @@ class FFMPEG::CodecContext
     builder.accessor :pix_fmt,                     'int'
     builder.accessor :rc_buffer_size,              'int'
     builder.accessor :rc_initial_buffer_occupancy, 'int'
+    builder.accessor :sample_rate,                 'int'
     builder.accessor :width,                       'int'
 
     builder.reader :channels,    'int'
     builder.reader :_codec_type, 'int', :codec_type
-    builder.reader :sample_rate, 'int'
     builder.reader :sample_fmt,  'int'
 
     builder.reader :codec_name, 'char *'
@@ -277,7 +277,7 @@ class FFMPEG::CodecContext
     private :new
   end
 
-  alias :pixel_format :pix_fmt
+  alias pixel_format pix_fmt
 
   def initialize(stream=nil)
     @stream = stream

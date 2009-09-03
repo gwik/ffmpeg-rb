@@ -2,8 +2,6 @@ class FFMPEG::FormatContext
 
   DTS_DELTA_THRESHOLD = 10
 
-  attr_accessor :sync_pts
-
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
@@ -130,11 +128,43 @@ class FFMPEG::FormatContext
 
     builder.c <<-C
       VALUE output_format() {
-        VALUE format_klass;
+        VALUE format_klass, obj;
+        AVFormatContext* format_context;
+        AVOutputFormat* output_format;
 
         format_klass = rb_path2class("FFMPEG::OutputFormat");
 
-        return rb_funcall(format_klass, rb_intern("from"), 1, self);
+        Data_Get_Struct(self, AVFormatContext, format_context);
+
+        if (format_context->oformat) {
+          obj = Data_Wrap_Struct(format_klass, NULL, NULL,
+                                 format_context->oformat);
+        } else {
+          obj = rb_funcall(format_klass, rb_intern("from"), 1, self);
+
+          Data_Get_Struct(obj, AVOutputFormat, output_format);
+
+          format_context->oformat = output_format;
+        }
+
+        return obj;
+      }
+    C
+
+    ##
+    # :method: output_format=
+
+    builder.c <<-C
+      VALUE output_format_equals(VALUE _output_format) {
+        AVFormatContext *format_context;
+        AVOutputFormat *output_format;
+
+        Data_Get_Struct(self, AVFormatContext, format_context);
+        Data_Get_Struct(_output_format, AVOutputFormat, output_format);
+
+        format_context->oformat = output_format;
+
+        return self;
       }
     C
 
@@ -226,23 +256,6 @@ class FFMPEG::FormatContext
         rb_funcall(obj, rb_intern("initialize"), 1, self);
 
         return obj;
-      }
-    C
-
-    ##
-    # :method: oformat=
-
-    builder.c <<-C
-      VALUE oformat_equals(VALUE _output_format) {
-        AVFormatContext *format_context;
-        AVOutputFormat *output_format;
-
-        Data_Get_Struct(self, AVFormatContext, format_context);
-        Data_Get_Struct(_output_format, AVOutputFormat, output_format);
-
-        format_context->oformat = output_format;
-
-        return self;
       }
     C
 
@@ -362,6 +375,9 @@ class FFMPEG::FormatContext
     builder.reader :timestamp,  'int64_t'
   end
 
+  attr_reader :format_parameters
+  attr_accessor :sync_pts
+
   ##
   # +file+ accepts a file name or an IO for output
   #
@@ -373,11 +389,13 @@ class FFMPEG::FormatContext
     @sync_pts = 0
     @video_stream = nil
     @stream_info = nil
+    @format_parameters = FFMPEG::FormatParameters.new
+
     unless output then
       raise NotImplementedError, 'input from IO not supported' unless
         String === file
 
-      open_input_file file, nil, 0, nil
+      open_input_file file, nil, 0, @format_parameters
 
       stream_info
     else
@@ -385,12 +403,28 @@ class FFMPEG::FormatContext
 
       output_format = FFMPEG::OutputFormat.guess_format nil, file, nil
 
-      self.oformat = output_format
+      self.output_format = output_format
       #self.filename = file # HACK av_strlcpy
 
       file = "pipe:#{file.fileno}" if IO === file
 
       open file, FFMPEG::URL_WRONLY
+    end
+  end
+
+  ##
+  # Is there an audio stream?
+
+  def audio?
+    !!audio_stream
+  end
+
+  ##
+  # The first audio stream
+
+  def audio_stream
+    @audio_stream ||= streams.find do |stream|
+      stream.codec_context.codec_type == :AUDIO
     end
   end
 
@@ -456,8 +490,7 @@ class FFMPEG::FormatContext
     len = packet.size
 
     while len > 0 or
-      (packet.nil? and
-       input_stream.next_pts != input_stream.pts)
+          (packet.nil? and input_stream.next_pts != input_stream.pts) do
 
        input_stream.pts = input_stream.next_pts
 
@@ -615,40 +648,55 @@ class FFMPEG::FormatContext
   end
 
   # output only
-  def new_output_video_stream(codec_name=nil, options={})
+  def output_stream(codec_type, codec_name = nil, options={})
     stream = new_output_stream
-    stream.context_defaults FFMPEG::Codec::VIDEO
+    stream.context_defaults codec_type
 
-    codec_id = output_format.guess_codec(codec_name, filename, nil,
-                                         FFMPEG::Codec::VIDEO)
+    codec_id = output_format.guess_codec codec_name, filename, nil, codec_type
+
     raise FFMPEG::Error, "unable to get codec #{codec_name}" unless codec_id
     codec = FFMPEG::Codec.for_encoder codec_id
 
     encoder = stream.codec_context
     encoder.defaults
 
-    (options.keys & [:bit_rate, :width, :height]).each do |key|
-      method = "#{key}=".to_sym
-      value = options.delete key
-      raise ArgumentError, "required option #{key} not set" if value.nil?
-      stream.send method, value  if stream.respond_to? method
-      encoder.send method, value if encoder.respond_to? method
+    if output_format.flags & FFMPEG::FormatParameters::GLOBALHEADER ==
+       FFMPEG::FormatParameters::GLOBALHEADER then
+      encoder.flags |= FFMPEG::Codec::Flag::GLOBAL_HEADER
     end
 
-    encoder.pix_fmt = options.delete(:pixel_format) || codec.pixel_formats[0]
-    encoder.fps = options.delete(:fps) || FFMPEG.Rational(25,1)
+    required = case codec_type
+               when FFMPEG::Codec::VIDEO then
+                 [:bit_rate, :width, :height]
+               when FFMPEG::Codec::AUDIO then
+                 [:bit_rate]
+               else raise NotImplementedError,
+                          "codec type #{codec_type} not supported"
+               end
+
+    (options.keys & required).each do |key|
+      method = "#{key}=".to_sym
+      raise ArgumentError, "required option #{key} not set" unless
+        options.key? key
+      stream.send  method, options[key] if stream.respond_to? method
+      encoder.send method, options[key] if encoder.respond_to? method
+    end
+
+    case codec_type
+    when FFMPEG::Codec::VIDEO then
+      encoder.pix_fmt = options[:pixel_format] || codec.pixel_formats[0]
+      encoder.fps = options[:fps] || FFMPEG.Rational(25,1)
+    when FFMPEG::Codec::AUDIO then
+      sample_rate = options[:sample_rate] || 44100
+      encoder.sample_rate = sample_rate
+      encoder.fps = FFMPEG.Rational 1, sample_rate
+    end
+
     encoder.bit_rate_tolerance =
-      options.delete(:bit_rate_tolerance) ||
-      encoder.bit_rate * 10 / 100
+      options[:bit_rate_tolerance] || encoder.bit_rate * 10 / 100
 
     encoder.codec_id = codec_id
     encoder.open codec
-
-    options.keys.each do |key|
-      method = "#{key}=".to_sym
-      stream.send  method, options[key] if stream.respond_to?(method)
-      encoder.send method, options[key] if encoder.respond_to?(method)
-    end
 
     stream
   end
@@ -796,9 +844,15 @@ class FFMPEG::FormatContext
     output_context.write_trailer
   end
 
+  ##
+  # Is there a video stream?
+
   def video?
     !!video_stream
   end
+
+  ##
+  # The first video stream
 
   def video_stream
     @video_stream ||= streams.find do |stream|
