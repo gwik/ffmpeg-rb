@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+
+require 'ffmpeg'
+require 'pp'
+
+file = ARGV.shift
+
+abort "#{$PROGRAM_NAME} filename" unless file
+
+input = FFMPEG::FormatContext.new file
+
+puts input.filename
+puts "#{input.duration.to_f / FFMPEG::TIME_BASE} seconds"
+puts
+
+puts 'streams:'
+input.streams.each do |stream|
+  codec_context = stream.codec_context
+  decoder = codec_context.decoder
+
+  dsp = "\t%2d %s" % [
+    stream.stream_index,
+    codec_context.codec_type,
+  ]
+
+  case codec_context.codec_type
+  when :AUDIO then
+    dsp << " #{stream.time_base.den} Hz"
+    dsp << " #{codec_context.channels} channels"
+    dsp << " #{FFMPEG::SampleFormat::FORMATS[codec_context.sample_fmt]}"
+  when :VIDEO then
+    dsp << " frame rate %s" % stream.r_frame_rate
+    dsp << " size: #{codec_context.dimensions}"
+  end
+
+  dsp << "\n\t\t#{decoder.long_name}"
+
+  puts dsp
+end
+
+puts
+puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q}"
+puts
+

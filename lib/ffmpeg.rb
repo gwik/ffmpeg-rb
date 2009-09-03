@@ -187,26 +187,6 @@ if __FILE__ == $0
     stream_map.add input_video_steam, mp4_stream
   end
 
-
-  # puts
-  # puts "input streams:"
-  # input.streams.each do |stream|
-  #   dsp = "\t%2d %s time base: %f frame rate: %f" % [
-  #     stream.stream_index,
-  #     stream.codec_context.codec_type,
-  #     stream.time_base.to_f,
-  #     stream.r_frame_rate.to_f,
-  #   ]
-  #
-  #   dsp += " size: #{stream.codec_context.width}x#{stream.codec_context.height}" if
-  #     stream.codec_context.codec_type == :VIDEO
-  #
-  #   puts dsp
-  # end
-  # puts
-  # puts "time base: #{FFMPEG::TIME_BASE} #{FFMPEG::TIME_BASE_Q.num}/#{FFMPEG::TIME_BASE_Q.den}"
-  # puts
-  #
   # input.transcode 'mp4', 'mpeg4', 'mp3', "out.mp4"
 
 end
