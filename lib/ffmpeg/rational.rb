@@ -87,6 +87,10 @@ class FFMPEG::Rational
     "#<%d/%d>" % [ num, den ]
   end
 
+  def to_s
+    "#{num}/#{den}"
+  end
+
   def to_f
     num.to_f / den
   end

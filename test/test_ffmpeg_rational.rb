@@ -42,5 +42,9 @@ class TestFFMPEGRational < FFMPEG::TestCase
     assert_in_delta 25.0, @rational.to_f
   end
 
+  def test_to_s
+    assert_equal '25/1', @rational.to_s
+  end
+
 end
 
