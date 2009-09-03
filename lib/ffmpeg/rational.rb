@@ -5,7 +5,11 @@ class FFMPEG::Rational
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
+    builder.map_c_const 'AV_ROUND_DOWN'     => ['int', :ROUND_DOWN]
+    builder.map_c_const 'AV_ROUND_INF'      => ['int', :ROUND_INF]
     builder.map_c_const 'AV_ROUND_NEAR_INF' => ['int', :ROUND_NEAR_INF]
+    builder.map_c_const 'AV_ROUND_UP'       => ['int', :ROUND_UP]
+    builder.map_c_const 'AV_ROUND_ZERO'     => ['int', :ROUND_ZERO]
 
     builder.prefix <<-C
       static void free_rational(AVRational * rational) {
@@ -18,28 +22,20 @@ class FFMPEG::Rational
 
     builder.c_singleton <<-C
       VALUE from(double value, int max) {
+        AVRational *ptr = av_mallocz(sizeof(AVRational));
         AVRational rational = av_d2q(value, max);
 
-        return Data_Wrap_Struct(self, 0, free_rational, &rational);
+        ptr->num = rational.num;
+        ptr->den = rational.den;
+
+        return Data_Wrap_Struct(self, NULL, free_rational, ptr);
       }
     C
 
-    # ##
-    # # :singleton-method: new
-    #
-    # builder.c_singleton <<-C
-    #   VALUE new(VALUE num, VALUE den) {
-    #     VALUE obj = Data_Wrap_Struct(self, 0, NULL, NULL);
-    #
-    #     if (NIL_P(rb_funcall(obj, rb_intern("initialize"), 2, num, den)))
-    #       return Qfalse;
-    #
-    #     return obj;
-    #   }
-    # C
-
     ##
     # :singleton-method: rescale_rnd
+    #
+    # Rescale +a+ by +b+/+c+ using rounding method +rounding+
 
     builder.c_singleton <<-C
       int64_t rescale_rnd(int64_t a, int64_t b, int64_t c, int rounding) {
@@ -88,10 +84,7 @@ class FFMPEG::Rational
   end
 
   def inspect
-    "#<%s:%x %d/%d>" % [
-      self.class, object_id,
-      num, den
-    ]
+    "#<%d/%d>" % [ num, den ]
   end
 
   def to_f
