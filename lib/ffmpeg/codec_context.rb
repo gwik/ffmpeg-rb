@@ -292,6 +292,10 @@ class FFMPEG::CodecContext
     FFMPEG::Codec.for_decoder(codec_id)
   end
 
+  def dimensions
+    "#{height}x#{width}"
+  end
+
   def inspect
     "#<%s:%x %s:%s %dx%d %dbps %0.2ffps>" % [
       self.class, object_id,

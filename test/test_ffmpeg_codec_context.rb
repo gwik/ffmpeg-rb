@@ -38,6 +38,10 @@ class TestFFMPEGCodecContext < FFMPEG::TestCase
     assert_equal 'h264', decoder.name
   end
 
+  def test_dimensions
+    assert_equal '144x176', @codec_context.dimensions
+  end
+
   def test_gop_size
     assert_equal 12, @codec_context.gop_size
   end
