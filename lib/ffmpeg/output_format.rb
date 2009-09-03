@@ -65,6 +65,8 @@ class FFMPEG::OutputFormat
 
     ##
     # :method: guess_codec
+    #
+    # TODO CODEC_ID constants
 
     builder.c <<-C, :method_name => :guess_codec
       int of_guess_codec(VALUE _shortname, VALUE _filename, VALUE _mimetype,
@@ -94,7 +96,7 @@ class FFMPEG::OutputFormat
     builder.reader :mime_type,  'char *'
     builder.reader :extensions, 'char *'
 
-    builder.reader :flags, 'int'
+    builder.reader :flags, 'int' # TODO flag constants
   end
 
   def initialize(format_context)
