@@ -1,6 +1,0 @@
-* b frames support
-* implement audio stream encoding
-* refactor video encoding loop, split methods
-* implement image manipulations : crop, pad, ...
-* support rtp streams
-* implement subtitle encoding
