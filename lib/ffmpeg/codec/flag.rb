@@ -42,3 +42,4 @@ class FFMPEG::Codec::Flag
     builder.map_c_const 'CODEC_FLAG_4MV' => ['int', 'FOURMV']
   end
 end
+

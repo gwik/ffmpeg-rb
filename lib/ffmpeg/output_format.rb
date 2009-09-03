@@ -96,7 +96,7 @@ class FFMPEG::OutputFormat
     builder.reader :mime_type,  'char *'
     builder.reader :extensions, 'char *'
 
-    builder.reader :flags, 'int' # TODO flag constants
+    builder.reader :flags, 'int'
   end
 
   def initialize(format_context)

@@ -23,7 +23,7 @@ class FFMPEG::Codec::Flag
     ]
 
     FLAG2_CONSTANTS.each do |const|
-      builder.map_c_const const => ['int', const.sub('CODEC_FLAG_', '')]
+      builder.map_c_const const => ['int', const.sub('CODEC_FLAG2_', '')]
     end
 
     builder.map_c_const 'CODEC_FLAG2_8X8DCT' => ['int', 'EIGHTXEIGHTDCT']
