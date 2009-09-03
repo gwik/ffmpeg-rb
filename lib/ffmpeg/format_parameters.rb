@@ -42,8 +42,18 @@ class FFMPEG::FormatParameters
     ]
 
     FORMAT_PARAMETER_CONSTANTS.each do |const|
-      builder.map_c_const const => ['int', conts.sub('AVFMT_', '')]
+      builder.map_c_const const => ['int', const.sub('AVFMT_', '')]
     end
+
+    builder.struct_name = 'AVFormatParameters'
+    builder.accessor :channel,     'int'
+    builder.accessor :channels,    'int'
+    builder.accessor :height,      'int'
+    builder.accessor :pix_fmt,     'int'
+    builder.accessor :sample_rate, 'int'
+    builder.accessor :width,       'int'
+
+    builder.accessor :standard, 'char *'
   end
 end
 
