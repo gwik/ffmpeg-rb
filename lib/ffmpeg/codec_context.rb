@@ -254,14 +254,16 @@ class FFMPEG::CodecContext
 
     builder.accessor :bit_rate,                    'int'
     builder.accessor :bit_rate_tolerance,          'int'
-    builder.accessor :width,                       'int'
-    builder.accessor :pix_fmt,                     'int'
+    builder.accessor :codec_id,                    'int'
     builder.accessor :gop_size,                    'int'
+    builder.accessor :flags,                       'int'
+    builder.accessor :flags2,                      'int'
+    builder.accessor :height,                      'int'
+    builder.accessor :max_b_frames,                'int'
+    builder.accessor :pix_fmt,                     'int'
     builder.accessor :rc_buffer_size,              'int'
     builder.accessor :rc_initial_buffer_occupancy, 'int'
-    builder.accessor :max_b_frames,                'int'
-    builder.accessor :codec_id,                    'int'
-    builder.accessor :height,                      'int'
+    builder.accessor :width,                       'int'
 
     builder.reader :channels,    'int'
     builder.reader :_codec_type, 'int', :codec_type
