@@ -83,6 +83,16 @@ class FFMPEG::Rational
     to_f <=> other.to_f
   end
 
+  ##
+  # Allows Rational to be used as a Numeric
+
+  def coerce(other)
+    case other
+    when self.class then [other, self]
+    else [other.to_f, to_f]
+    end
+  end
+
   def inspect
     "#<%d/%d>" % [ num, den ]
   end

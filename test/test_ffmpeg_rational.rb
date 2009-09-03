@@ -28,6 +28,13 @@ class TestFFMPEGRational < FFMPEG::TestCase
     assert_equal 8, rescaled
   end
 
+  def test_coerce
+    assert_equal [5.0, 25.0], @rational.coerce(5)
+
+    other = @R.new 26, 1
+    assert_equal [other, @rational], @rational.coerce(other)
+  end
+
   def test_inspect
     assert_equal '#<25/1>', @rational.inspect
   end
