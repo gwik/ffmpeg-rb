@@ -266,6 +266,7 @@ class FFMPEG::CodecContext
     builder.reader :channels,    'int'
     builder.reader :_codec_type, 'int', :codec_type
     builder.reader :sample_rate, 'int'
+    builder.reader :sample_fmt,  'int'
 
     builder.reader :codec_name, 'char *'
   end

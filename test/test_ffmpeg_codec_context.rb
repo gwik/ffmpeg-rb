@@ -54,6 +54,10 @@ class TestFFMPEGCodecContext < FFMPEG::TestCase
     assert_equal FFMPEG::PixelFormat::YUV420P, @codec_context.pixel_format
   end
 
+  def test_sample_fmt
+    assert_equal 1, @codec_context.sample_fmt
+  end
+
   def test_time_base
     assert_equal FFMPEG::Rational.new(1, 5994), @codec_context.time_base
   end
