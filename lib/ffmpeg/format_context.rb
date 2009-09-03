@@ -348,10 +348,13 @@ class FFMPEG::FormatContext
     builder.accessor :loop_output, 'int'
     builder.accessor :max_delay,   'int'
     builder.accessor :preload,     'int'
-
     builder.accessor :bit_rate,    'int'
+
     builder.reader :track,       'int'
     builder.reader :year,        'int'
+
+    ##
+    # Duration in FFMPEG::TIME_BASE units
 
     builder.reader :duration,   'int64_t'
     builder.reader :file_size,  'int64_t'
