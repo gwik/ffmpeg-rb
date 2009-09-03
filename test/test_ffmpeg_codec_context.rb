@@ -1,4 +1,4 @@
-require 'ffmpeg_test_case'
+require 'ffmpeg/test_case'
 
 class TestFFMPEGCodecContext < FFMPEG::TestCase
 

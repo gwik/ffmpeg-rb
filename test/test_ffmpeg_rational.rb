@@ -1,4 +1,4 @@
-require 'ffmpeg_test_case'
+require 'ffmpeg/test_case'
 
 class TestFFMPEGRational < FFMPEG::TestCase
 
