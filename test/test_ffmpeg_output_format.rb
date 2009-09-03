@@ -22,13 +22,13 @@ class TestFFMPEGOutputFormat < FFMPEG::TestCase
 
   def test_class_guess_codec
     id = @of.guess_codec 'm4v', nil, nil, FFMPEG::Codec::VIDEO
-    assert_equal 5, id
+    assert_equal FFMPEG::Codec::ID::H263, id
 
     id = @of.guess_codec nil, @thumbs_up, nil, FFMPEG::Codec::VIDEO
-    assert_equal 5, id
+    assert_equal FFMPEG::Codec::ID::H263, id
 
     id = @of.guess_codec nil, nil, 'video/mpeg', FFMPEG::Codec::VIDEO
-    assert_equal 5, id
+    assert_equal FFMPEG::Codec::ID::H263, id
   end
 
   def test_extensions

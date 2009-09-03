@@ -65,8 +65,6 @@ class FFMPEG::OutputFormat
 
     ##
     # :method: guess_codec
-    #
-    # TODO CODEC_ID constants
 
     builder.c <<-C, :method_name => :guess_codec
       int of_guess_codec(VALUE _shortname, VALUE _filename, VALUE _mimetype,
