@@ -1,4 +1,4 @@
-class FFMPEG::Codec::Flag
+class FFMPEG::Codec::Flag2
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
