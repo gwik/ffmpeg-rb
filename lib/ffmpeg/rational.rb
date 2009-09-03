@@ -97,3 +97,7 @@ class FFMPEG::Rational
 
 end
 
+def FFMPEG.Rational(num, den)
+  FFMPEG::Rational.new num, den
+end
+

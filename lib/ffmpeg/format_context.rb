@@ -402,7 +402,7 @@ class FFMPEG::FormatContext
   end
 
   def encode_frame(frame, output_stream)
-    @output_buffer ||= FrameBuffer.new(1048576)
+    @output_buffer ||= FFMPEG::FrameBuffer.new 1048576
     @output_packet ||= FFMPEG::Packet.new
     packet = @output_packet.clean
 
@@ -444,7 +444,8 @@ class FFMPEG::FormatContext
     video_decoder = input_stream.codec_context
     @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
 
-    input_stream.next_pts = input_stream.pts if input_stream.next_pts == NOPTS_VALUE
+    input_stream.next_pts = input_stream.pts if
+      input_stream.next_pts == FFMPEG::NOPTS_VALUE
 
     if packet.dts != FFMPEG::NOPTS_VALUE then
       input_stream.pts = FFMPEG::Rational.rescale_q packet.dts,
@@ -480,16 +481,19 @@ class FFMPEG::FormatContext
        len = 0
 
        @scaler ||= FFMPEG::ImageScaler.new video_decoder.width,
-         video_decoder.height,
-         video_decoder.pix_fmt,
-         output_stream.codec_context.width,
-         output_stream.codec_context.height,
-         output_stream.codec_context.pix_fmt,
-         FFMPEG::ImageScaler::BICUBIC
+                                           video_decoder.height,
+                                           video_decoder.pix_fmt,
+                                           output_stream.codec_context.width,
+                                           output_stream.codec_context.height,
+                                           output_stream.codec_context.pix_fmt,
+                                           FFMPEG::ImageScaler::BICUBIC
 
-       output_stream.sync_pts = input_stream.pts / TIME_BASE.to_f / output_stream.codec_context.time_base.to_f
+       output_stream.sync_pts =
+         input_stream.pts / FFMPEG::TIME_BASE.to_f /
+         output_stream.codec_context.time_base.to_f
 
-       output_packet = output_context.encode_frame @scaler.scale(@in_frame), output_stream
+       output_packet = output_context.encode_frame @scaler.scale(@in_frame),
+                                                   output_stream
 
        # $stderr.puts "Output ts: output_packet.pts:#{output_packet.pts}, output_packet.dts:#{output_packet.dts}"
 
@@ -502,11 +506,13 @@ class FFMPEG::FormatContext
   end
 
   def transcode_map(&block)
-    stream_map = StreamMap.new(self)
-    yield stream_map
-    raise RuntimeError.new("map is empty !") if stream_map.empty?
+    stream_map = FFMPEG::StreamMap.new self
 
-    prepare_transcoding(stream_map)
+    yield stream_map
+
+    raise FFMPEG::Error, 'map is empty' if stream_map.empty?
+
+    prepare_transcoding stream_map
 
     # TODO do prep and transcode
     stream_map.output_format_contexts.each do |output_context|
@@ -521,27 +527,34 @@ class FFMPEG::FormatContext
     loop do
       input_packet.clean
 
-      eof = true unless read_frame input_packet
+      begin
+        read_frame input_packet
+      rescue EOFError
+        eof = true
+      end
 
       # next unless input_packet.stream_index == video_stream.stream_index
 
       if input_packet.dts != FFMPEG::NOPTS_VALUE then
-        input_packet.dts += FFMPEG::Rational.rescale_q @timestamp_offset,
-          FFMPEG::TIME_BASE_Q,
-          video_stream.time_base
+        input_packet.dts += FFMPEG::Rational.rescale_q(@timestamp_offset,
+                                                       FFMPEG::TIME_BASE_Q,
+                                                       video_stream.time_base)
       end
 
       if input_packet.pts != FFMPEG::NOPTS_VALUE then
-        input_packet.pts += FFMPEG::Rational.rescale_q @timestamp_offset,
-          FFMPEG::TIME_BASE_Q,
-          video_stream.time_base
+        input_packet.pts += FFMPEG::Rational.rescale_q(@timestamp_offset,
+                                                       FFMPEG::TIME_BASE_Q,
+                                                       video_stream.time_base)
       end
 
-      break :fail if input_packet.pts == NOPTS_VALUE
+      break :fail if input_packet.pts == FFMPEG::NOPTS_VALUE
       # $stderr.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
+
+      next unless stream_map.map[input_packet.stream_index]
+
       stream_map.map[input_packet.stream_index].each do |output_stream|
-        output input_packet, output_stream.format_context, output_stream,
-          streams[input_packet.stream_index]
+        output(input_packet, output_stream.format_context, output_stream,
+               streams[input_packet.stream_index])
       end
     end
 
@@ -610,7 +623,7 @@ class FFMPEG::FormatContext
 
     codec_id = output_format.guess_codec codec_name, nil, filename, FFMPEG::Codec::VIDEO
     raise "Unable to get a codec : #{codec_name}" unless codec_id
-    codec = Codec.for_encoder(codec_id)
+    codec = FFMPEG::Codec.for_encoder codec_id
 
     encoder = stream.codec_context
     encoder.defaults
@@ -623,8 +636,8 @@ class FFMPEG::FormatContext
       encoder.send(method, value) if encoder.respond_to?(method)
     end
 
-    encoder.pix_fmt = options.delete(:pixel_format) || codec.pix_fmts[0]
-    encoder.fps = options.delete(:fps) || Rational.new(25,1)
+    encoder.pix_fmt = options.delete(:pixel_format) || codec.pixel_formats[0]
+    encoder.fps = options.delete(:fps) || FFMPEG::Rational.new(25,1)
     encoder.bit_rate_tolerance = options.delete(:bit_rate_tolerance) || encoder.bit_rate * 10 / 100
 
     encoder.codec_id = codec_id
@@ -655,7 +668,7 @@ class FFMPEG::FormatContext
       output_video_stream.context_defaults FFMPEG::Codec::VIDEO
       output_video_stream.time_base.num = 1
       output_video_stream.time_base.den = 25
-      output_video_stream.duration = Rational.rescale_q(video_stream.duration,
+      output_video_stream.duration = FFMPEG::Rational.rescale_q(video_stream.duration,
                                                         video_stream.time_base, output_video_stream.time_base)
 
       video_encoder = output_video_stream.codec_context
@@ -774,7 +787,7 @@ class FFMPEG::FormatContext
       #   end
       # end
 
-      break :fail if input_packet.pts == NOPTS_VALUE
+      break :fail if input_packet.pts == FFMPEG::NOPTS_VALUE
       # $stderr.puts "input_packet.pts: #{input_packet.pts}, input_packet.dts: #{input_packet.dts}, output_context.sync_pts: #{output_context.sync_pts}"
       output input_packet, output_context, output_context.video_stream, video_stream
     end
