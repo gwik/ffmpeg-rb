@@ -7,7 +7,6 @@ class FFMPEG::FormatParameters
         fprintf(stderr, "free format parameters\\n");
         av_free(format_parameters);
       }
-
     C
 
     ##

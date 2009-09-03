@@ -162,13 +162,13 @@ class FFMPEG::Frame
 
   def type
     case pict_type
-    when I_TYPE ; :I_TYPE
-    when P_TYPE ; :P_TYPE
-    when B_TYPE ; :B_TYPE
-    when S_TYPE ; :S_TYPE
-    when SI_TYPE ; :S_TYPE
-    when SP_TYPE ; :SP_TYPE
-    when BI_TYPE ; :BI_TYPE
+    when I_TYPE  then :I_TYPE
+    when P_TYPE  then :P_TYPE
+    when B_TYPE  then :B_TYPE
+    when S_TYPE  then :S_TYPE
+    when SI_TYPE then :S_TYPE
+    when SP_TYPE then :SP_TYPE
+    when BI_TYPE then :BI_TYPE
     end
   end
 
