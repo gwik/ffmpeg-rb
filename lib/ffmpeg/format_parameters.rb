@@ -5,7 +5,6 @@ class FFMPEG::FormatParameters
     builder.prefix <<-C
       void free_format_parameters(AVFormatParameters* format_parameters)
       {
-        fprintf(stderr, "free format parameters\\n");
         av_free(format_parameters);
       }
     C
@@ -23,7 +22,7 @@ class FFMPEG::FormatParameters
         if (!format_parameters)
           rb_raise(rb_eNoMemError, "unable to allocate AVFormatParameters");
 
-        obj = Data_Wrap_Struct(self, free_format_parameters, NULL, format_parameters);
+        obj = Data_Wrap_Struct(self, NULL, free_format_parameters, format_parameters);
 
         return obj;
       }
