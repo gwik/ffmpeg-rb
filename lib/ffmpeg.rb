@@ -157,6 +157,7 @@ require 'ffmpeg/image_scaler'
 require 'ffmpeg/stream_map'
 require 'ffmpeg/pixel_format'
 require 'ffmpeg/sample_format'
+require 'ffmpeg/fifo'
 
 if ENV['DEBUG_FFMPEG_RB'] then
   begin
