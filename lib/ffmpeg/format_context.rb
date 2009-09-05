@@ -2,6 +2,8 @@ class FFMPEG::FormatContext
 
   DTS_DELTA_THRESHOLD = 10
 
+  MAX_AUDIO_PACKET_SIZE = 128 * 1024 # from ffmpeg.c, no clue why
+
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
@@ -376,6 +378,7 @@ class FFMPEG::FormatContext
   end
 
   attr_reader :format_parameters
+
   attr_accessor :sync_pts
 
   ##
@@ -612,11 +615,11 @@ class FFMPEG::FormatContext
 
       stream_map.map[input_packet.stream_index].each do |output_stream|
         case output_stream.type
-        when :VIDEO then
-          output_video(input_packet, output_stream.format_context,
-                       output_stream, streams[input_packet.stream_index])
         when :AUDIO then
           output_audio(input_packet, output_stream.format_context,
+                       output_stream, streams[input_packet.stream_index])
+        when :VIDEO then
+          output_video(input_packet, output_stream.format_context,
                        output_stream, streams[input_packet.stream_index])
         else
           raise NotImplementedError,
@@ -653,14 +656,17 @@ class FFMPEG::FormatContext
         output_stream.sync_pts = 0
 
         if output_stream.duration.zero? then
-          ouput_stream.duration = Rational.rescale_q(video_stream.duration,
-                                                     video_stream.time_base,
-                                                     output_video_stream.time_base)
+          output_stream.duration = Rational.rescale_q(video_stream.duration,
+                                                      video_stream.time_base,
+                                                      output_video_stream.time_base)
         end
 
-        # encoder.open Codec.for_encoder(encoder.codec_id)
+        # encoder.open FFMPEG::Codec.for_encoder(encoder.codec_id)
 
-        if encoder.codec_type == :VIDEO then
+        case encoder.codec_type
+        when :AUDIO then
+          output_stream.fifo = FFMPEG::FIFO.new 0
+        when :VIDEO then
           # TODO preserve ratio if width or height provided
           if encoder.width == 0
             encoder.width = decoder.width
