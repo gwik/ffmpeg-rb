@@ -12,7 +12,6 @@ flv_stream = flv.output_stream(FFMPEG::Codec::VIDEO, 'flv',
                                :width => 300, :height => 200,
                                :fps => FFMPEG.Rational(25, 1))
 mp3_stream = flv.output_stream(FFMPEG::Codec::AUDIO, 'mp3',
-                               #:width => 300, :height => 200,
                                :bit_rate => 128 * 1024)
 
 #mp4_stream = mp4.new_output_video_stream('mpeg4', :bit_rate => 2_000_000,
@@ -21,10 +20,8 @@ mp3_stream = flv.output_stream(FFMPEG::Codec::AUDIO, 'mp3',
 #                                         :fps => FFMPEG.Rational(25,1))
 
 input.transcode_map do |stream_map|
+  #stream_map.add input.video_stream, mp4_stream
   stream_map.add input.video_stream, flv_stream
   stream_map.add input.audio_stream, mp3_stream
-  #stream_map.add input.video_stream, mp4_stream
 end
-
-# input.transcode 'mp4', 'mpeg4', 'mp3', "out.mp4"
 

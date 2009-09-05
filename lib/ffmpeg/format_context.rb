@@ -447,92 +447,120 @@ class FFMPEG::FormatContext
 
     bytes = video_encoder.encode_video frame, @output_buffer
 
-    #p :encoded => bytes
-
     packet.buffer = @output_buffer
     packet.size = bytes
 
     if video_encoder.coded_frame and
-      video_encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
-      packet.pts = FFMPEG::Rational.rescale_q video_encoder.coded_frame.pts,
-        video_encoder.time_base,
-        output_stream.time_base
+       video_encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
+      packet.pts = FFMPEG::Rational.rescale_q(video_encoder.coded_frame.pts,
+                                              video_encoder.time_base,
+                                              output_stream.time_base)
     else
       packet.pts = output_stream.sync_pts
     end
 
-    # puts video_encoder.coded_frame.pict_type
-
-    if video_encoder.coded_frame and
-      video_encoder.coded_frame.key_frame then
+    if video_encoder.coded_frame and video_encoder.coded_frame.key_frame then
       packet.flags |= FFMPEG::Packet::FLAG_KEY
     end
 
-    #puts video_encoder.coded_frame.type.to_s
-    #$stdout.print "\rtime: #{format "%7.2f", output_stream.sync_pts * video_encoder.time_base.to_f} #{format "%10d", packet.pts} #{video_encoder.coded_frame.type}"
-    #$stdout.flush
     packet
   end
 
-  def output(packet, output_context, output_stream, input_stream)
-    video_decoder = input_stream.codec_context
-    @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height, video_decoder.pix_fmt)
+  def output_audio(packet, output_context, output_stream, input_stream)
+    audio_decoder = input_stream.codec_context
+    audio_codec = audio_decoder.codec
+    buffer = ''
 
     input_stream.next_pts = input_stream.pts if
       input_stream.next_pts == FFMPEG::NOPTS_VALUE
 
     if packet.dts != FFMPEG::NOPTS_VALUE then
-      input_stream.pts = FFMPEG::Rational.rescale_q packet.dts,
-        input_stream.time_base, FFMPEG::TIME_BASE_Q
+      input_stream.pts = FFMPEG::Rational.rescale_q(packet.dts,
+                                                    input_stream.time_base,
+                                                    FFMPEG::TIME_BASE_Q)
       input_stream.next_pts = input_stream.pts
     end
 
     len = packet.size
 
     while len > 0 or
-          (packet.nil? and input_stream.next_pts != input_stream.pts) do
+          (packet.nil? and input_stream.next_pts != input_stream.pts)
+      input_stream.pts = input_stream.next_pts
 
-       input_stream.pts = input_stream.next_pts
+      new_size = [packet.size * buffer.length,
+                  FFMPEG::Codec::MAX_AUDIO_FRAME_SIZE].max
 
-       data_size = video_decoder.width * video_decoder.height * 3 / 2
+      buffer = "\0" * new_size if packet and buffer.length < new_size
 
-       @in_frame.defaults
-       @in_frame.quality = input_stream.quality
+      bytes_used = audio_decoder.decode_audio buffer, packet
 
-       got_picture, bytes = video_decoder.decode_video @in_frame, packet
+      len -= bytes_used
 
-       break :fail if bytes.nil?
+      input_stream.next_pts += FFMPEG::TIME_BASE / 2 * buffer.length /
+        audio_decoder.sample_rate * audio_decoder.channels
 
-       @in_frame = nil unless got_picture
+      # done decoding audio
+    end
+  end
 
-       if video_decoder.time_base.num != 0 then
-         input_stream.next_pts += FFMPEG::TIME_BASE *
-           video_decoder.time_base.num /
-           video_decoder.time_base.den
-       end
+  def output_video(packet, output_context, output_stream, input_stream)
+    video_decoder = input_stream.codec_context
+    @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height,
+                                    video_decoder.pix_fmt)
 
-       len = 0
+    input_stream.next_pts = input_stream.pts if
+      input_stream.next_pts == FFMPEG::NOPTS_VALUE
 
-       @scaler ||= FFMPEG::ImageScaler.new video_decoder.width,
-                                           video_decoder.height,
-                                           video_decoder.pix_fmt,
-                                           output_stream.codec_context.width,
-                                           output_stream.codec_context.height,
-                                           output_stream.codec_context.pix_fmt,
-                                           FFMPEG::ImageScaler::BICUBIC
+    if packet.dts != FFMPEG::NOPTS_VALUE then
+      input_stream.pts = FFMPEG::Rational.rescale_q(packet.dts,
+                                                    input_stream.time_base,
+                                                    FFMPEG::TIME_BASE_Q)
+      input_stream.next_pts = input_stream.pts
+    end
 
-       output_stream.sync_pts =
-         input_stream.pts / FFMPEG::TIME_BASE.to_f /
-         output_stream.codec_context.time_base.to_f
+    len = packet.size
 
-       output_packet = output_context.encode_frame @scaler.scale(@in_frame),
-                                                   output_stream
+    while len > 0 or
+          (packet.nil? and input_stream.next_pts != input_stream.pts)
+      input_stream.pts = input_stream.next_pts
 
-       if output_packet.size > 0 then
-         output_context.interleaved_write output_packet
-       end
+      data_size = video_decoder.width * video_decoder.height * 3 / 2
 
-       output_context.sync_pts += 1
+      @in_frame.defaults
+      @in_frame.quality = input_stream.quality
+
+      got_picture, bytes = video_decoder.decode_video @in_frame, packet
+
+      break :fail if bytes.nil?
+
+      @in_frame = nil unless got_picture
+
+      if video_decoder.time_base.num != 0 then
+        input_stream.next_pts += FFMPEG::TIME_BASE * video_decoder.time_base
+      end
+
+      len = 0
+
+      # done decoding
+
+      @scaler ||= FFMPEG::ImageScaler.new video_decoder.width,
+                                          video_decoder.height,
+                                          video_decoder.pix_fmt,
+                                          output_stream.codec_context.width,
+                                          output_stream.codec_context.height,
+                                          output_stream.codec_context.pix_fmt,
+                                          FFMPEG::ImageScaler::BICUBIC
+
+      output_stream.sync_pts =
+        input_stream.pts.to_f / FFMPEG::TIME_BASE /
+        output_stream.codec_context.time_base
+
+      output_packet = output_context.encode_frame @scaler.scale(@in_frame),
+                                                  output_stream
+
+      output_context.interleaved_write output_packet if output_packet.size > 0
+
+      output_context.sync_pts += 1
     end
   end
 
@@ -583,8 +611,17 @@ class FFMPEG::FormatContext
       next unless stream_map.map[input_packet.stream_index]
 
       stream_map.map[input_packet.stream_index].each do |output_stream|
-        output(input_packet, output_stream.format_context, output_stream,
-               streams[input_packet.stream_index])
+        case output_stream.type
+        when :VIDEO then
+          output_video(input_packet, output_stream.format_context,
+                       output_stream, streams[input_packet.stream_index])
+        when :AUDIO then
+          output_audio(input_packet, output_stream.format_context,
+                       output_stream, streams[input_packet.stream_index])
+        else
+          raise NotImplementedError,
+                "#{output_stream.type} output not implemented"
+        end
       end
     end
 
@@ -701,149 +738,6 @@ class FFMPEG::FormatContext
     stream
   end
 
-  def transcode(wrapper, video, audio, io)
-    @scaler = nil
-    @in_frame = nil
-    output_audio_codec = FFMPEG::Codec.for_encoder audio
-
-    output_context = FFMPEG::FormatContext.new io, wrapper
-    output_format = output_context.output_format
-
-    if video? then
-      video_decoder = video_stream.codec_context
-      input_video_codec = video_decoder.decoder
-
-      output_video_stream = output_context.new_output_stream
-      output_video_stream.context_defaults FFMPEG::Codec::VIDEO
-      output_video_stream.time_base.num = 1
-      output_video_stream.time_base.den = 25
-      output_video_stream.duration = FFMPEG::Rational.rescale_q(video_stream.duration,
-                                                        video_stream.time_base, output_video_stream.time_base)
-
-      video_encoder = output_video_stream.codec_context
-      video_encoder.defaults
-
-      output_video_codec = FFMPEG::Codec.for_encoder video
-
-      codec_id = output_format.guess_codec nil, output_context.filename, nil,
-        FFMPEG::Codec::VIDEO
-      video_encoder.time_base.num = 1
-      video_encoder.time_base.den = 25
-
-      video_encoder.gop_size = 12
-
-      video_encoder.width = 300
-      video_encoder.height = 200
-
-      video_encoder.sample_aspect_ratio.num = 4/3 * 200/300
-      video_encoder.sample_aspect_ratio.den = 255
-
-      video_encoder.bit_rate =  1000 * 1000
-      output_context.bit_rate = 1000 * 1000
-      video_encoder.bit_rate_tolerance = 200 * 1000
-      video_encoder.max_b_frames = 8
-
-      video_encoder.pix_fmt = video_stream.codec_context.pix_fmt
-
-      unless video_encoder.rc_initial_buffer_occupancy > 1 then
-        video_encoder.rc_initial_buffer_occupancy =
-          video_encoder.rc_buffer_size * 3 / 4
-      end
-    end
-
-    #output_context.new_audio_stream if audio?
-
-    # HACK needs to use av_strlcpy
-    #output_context.album     = album     if album
-    #output_context.author    = author    if author
-    #output_context.comment   = comment   if comment
-    #output_context.copyright = copyright if copyright
-    #output_context.genre     = genre     if genre
-    #output_context.title     = title     if title
-
-    output_context.preload = 0.5 * FFMPEG::TIME_BASE
-    output_context.max_delay = 0.7 * FFMPEG::TIME_BASE
-    output_context.loop_output = FFMPEG::OutputFormat::NO_OUTPUT_LOOP
-
-    bit_buffer_size = video_encoder.width * video_encoder.height * 4
-
-    video_encoder.open output_video_codec
-    video_decoder.open input_video_codec
-
-    video_stream.pts = 0
-    video_stream.next_pts = FFMPEG::NOPTS_VALUE
-
-    output_context.write_header
-
-    input_packet = FFMPEG::Packet.new
-
-    output_context.video_stream.sync_pts = 0
-    #sync_pts = 0
-    eof = false
-    packet_dts = 0
-
-    loop do
-      input_packet.clean
-
-      input_pts_min  = 1e100
-      output_pts_min = 1e100
-
-      output_pts = output_context.video_stream.sync_pts * video_encoder.time_base.to_f
-      input_pts  = video_stream.pts.to_f
-
-      unless eof then
-        input_pts_min  = input_pts  if input_pts  < input_pts_min
-        output_pts_min = output_pts if output_pts < output_pts_min
-      end
-
-      eof = true unless read_frame input_packet
-
-      next unless input_packet.stream_index == video_stream.stream_index
-
-      if input_packet.dts != FFMPEG::NOPTS_VALUE then
-        input_packet.dts += FFMPEG::Rational.rescale_q(@timestamp_offset,
-                                                       FFMPEG::TIME_BASE_Q,
-                                                       video_stream.time_base)
-      end
-
-      if input_packet.pts != FFMPEG::NOPTS_VALUE then
-        input_packet.pts += FFMPEG::Rational.rescale_q(@timestamp_offset,
-                                                       FFMPEG::TIME_BASE_Q,
-                                                       video_stream.time_base)
-      end
-
-      # if input_packet.dts != FFMPEG::NOPTS_VALUE and
-      #    video_stream.next_pts != FFMPEG::NOPTS_VALUE then
-      #   packet_dts = FFMPEG::Rational.rescale_q input_packet.dts,
-      #                                           video_stream.time_base,
-      #                                           FFMPEG::TIME_BASE_Q
-      #
-      #   delta = packet_dts - video_stream.next_pts
-      #
-      #   if delta.abs > DTS_DELTA_THRESHOLD * FFMPEG::TIME_BASE or
-      #      packet_dts + 1 < video_stream.pts then # HACK && !copy_ts
-      #     @timestamp_offset -= delta
-      #
-      #     input_packet.dts -= FFMPEG::Rational.rescale_q delta,
-      #                                                    FFMPEG::TIME_BASE_Q,
-      #                                                    video_stream.time_base
-      #
-      #     if input_packet.pts != FFMPEG::NOPTS_VALUE then
-      #       input_packet.pts -= FFMPEG::Rational.rescale_q delta,
-      #                                                      FFMPEG::TIME_BASE_Q,
-      #                                                      video_stream.time_base
-      #     end
-      #   end
-      # end
-
-      break :fail if input_packet.pts == FFMPEG::NOPTS_VALUE
-
-      output input_packet, output_context, output_context.video_stream, video_stream
-    end
-
-    output_context.write_trailer
-  end
-
   ##
   # Is there a video stream?
 
@@ -858,10 +752,6 @@ class FFMPEG::FormatContext
     @video_stream ||= streams.find do |stream|
       stream.codec_context.codec_type == :VIDEO
     end
-  end
-
-  def write_packet(packet)
-    interleaved_write packet
   end
 
 end

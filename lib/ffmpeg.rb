@@ -131,9 +131,10 @@ module FFMPEG
       rb_define_const(c, "TIME_BASE_Q", ffmpeg_rat2obj(time_base_q));
     C
 
-    builder.map_c_const 'AV_TIME_BASE'    => ['int', :TIME_BASE]
-    builder.map_c_const 'URL_WRONLY'      => 'int'
-    builder.map_c_const 'AV_NOPTS_VALUE'  => ['int64_t', :NOPTS_VALUE]
+    builder.map_c_const 'AV_TIME_BASE'       => ['int',     :TIME_BASE]
+    builder.map_c_const 'URL_WRONLY'         =>  'int'
+    builder.map_c_const 'AV_NOPTS_VALUE'     => ['int64_t', :NOPTS_VALUE]
+    builder.map_c_const 'FF_MIN_BUFFER_SIZE' => ['int',     :MIN_BUFFER_SIZE]
   end
 
 end

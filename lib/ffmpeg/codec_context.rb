@@ -38,6 +38,40 @@ class FFMPEG::CodecContext
     C
 
     ##
+    # :method: decode_audio
+
+    builder.c <<-C
+      VALUE decode_audio(VALUE buffer, VALUE packet) {
+        AVCodecContext *codec_context;
+        AVPacket *pkt;
+        int16_t *samples;
+        int bytes_used, frame_size;
+
+        if (NIL_P(pkt))
+          return Qnil;
+
+        Data_Get_Struct(self, AVCodecContext, codec_context);
+        Data_Get_Struct(packet, AVPacket, pkt);
+
+        samples = (int16_t *)RSTRING_PTR(buffer);
+        frame_size = RSTRING_LEN(buffer);
+
+        bytes_used = avcodec_decode_audio3(codec_context, samples,
+                                           &frame_size, pkt);
+
+        ffmpeg_check_error(bytes_used);
+
+        #ifdef rb_str_set_len
+        rb_str_set_len(buffer, frame_size);
+        #else
+        RSTRING(buffer)->len = frame_size;
+        #endif
+
+        return INT2NUM(bytes_used);
+      }
+    C
+
+    ##
     # :method: decode_video
 
     builder.c <<-C

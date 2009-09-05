@@ -3,6 +3,9 @@ class FFMPEG::Codec
   inline :C do |builder|
     FFMPEG.builder_defaults builder
 
+    builder.map_c_const :AVCODEC_MAX_AUDIO_FRAME_SIZE =>
+                          ['int', :MAX_AUDIO_FRAME_SIZE]
+
     TYPE_CONSTS = [
       [:UNKNOWN,    :CODEC_TYPE_UNKNOWN,    :int],
       [:VIDEO,      :CODEC_TYPE_VIDEO,      :int],
