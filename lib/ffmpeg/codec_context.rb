@@ -21,6 +21,19 @@ class FFMPEG::CodecContext
     C
 
     ##
+    # :method: bits_per_sample
+
+    builder.c <<-C
+      int bits_per_sample() {
+        AVCodecContext *codec_context;
+
+        Data_Get_Struct(self, AVCodecContext, codec_context);
+
+        return av_get_bits_per_sample_format(codec_context->sample_fmt);
+      }
+    C
+
+    ##
     # :method: encoder
 
     builder.c <<-C
@@ -300,9 +313,9 @@ class FFMPEG::CodecContext
     builder.accessor :sample_rate,                 'int'
     builder.accessor :width,                       'int'
 
-    builder.reader :channels,    'int'
-    builder.reader :_codec_type, 'int', :codec_type
-    builder.reader :sample_fmt,  'int'
+    builder.reader :channels,      'int'
+    builder.reader :_codec_type,   'int', :codec_type
+    builder.reader :sample_format, 'int', :sample_fmt
 
     builder.reader :codec_name, 'char *'
   end
@@ -315,6 +328,10 @@ class FFMPEG::CodecContext
 
   def initialize(stream=nil)
     @stream = stream
+  end
+
+  def bytes_per_sample
+    bits_per_sample / 8
   end
 
   def codec_type

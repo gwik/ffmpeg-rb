@@ -13,6 +13,14 @@ class TestFFMPEGCodecContext < FFMPEG::TestCase
     assert_equal 0, @codec_context.bit_rate
   end
 
+  def test_bits_per_sample
+    assert_equal 16, @codec_context.bits_per_sample
+  end
+
+  def test_bytes_per_sample
+    assert_equal 2, @codec_context.bytes_per_sample
+  end
+
   def test_codec
     assert_equal nil, @codec_context.codec
 
@@ -54,8 +62,8 @@ class TestFFMPEGCodecContext < FFMPEG::TestCase
     assert_equal FFMPEG::PixelFormat::YUV420P, @codec_context.pixel_format
   end
 
-  def test_sample_fmt
-    assert_equal 1, @codec_context.sample_fmt
+  def test_sample_format
+    assert_equal 1, @codec_context.sample_format
   end
 
   def test_time_base

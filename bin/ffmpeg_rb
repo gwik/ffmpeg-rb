@@ -27,7 +27,7 @@ input.streams.each do |stream|
   when :AUDIO then
     dsp << " #{stream.time_base.den} Hz"
     dsp << " #{codec_context.channels} channels"
-    dsp << " #{FFMPEG::SampleFormat::FORMATS[codec_context.sample_fmt]}"
+    dsp << " #{FFMPEG::SampleFormat::FORMATS[codec_context.sample_format]}"
   when :VIDEO then
     dsp << " frame rate %s" % stream.r_frame_rate
     dsp << " size: #{codec_context.dimensions}"
