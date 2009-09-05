@@ -10,15 +10,15 @@ class TestFFMPEGFormatContext < FFMPEG::TestCase
   end
 
   def test_bit_rate
-    assert_equal 63765, @fc.bit_rate
+    assert_equal 85221, @fc.bit_rate
   end
 
   def test_duration
-    assert_equal 2_624_000, @fc.duration
+    assert_equal 2_816_000, @fc.duration
   end
 
   def test_file_size
-    assert_equal 20915, @fc.file_size
+    assert_equal 29998, @fc.file_size
   end
 
   def test_input_format
