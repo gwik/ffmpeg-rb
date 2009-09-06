@@ -136,7 +136,7 @@ class FFMPEG::FIFO
     realloc bytes
   end
 
-  def inspect
+  def inspect # :nodoc:
     '#<%s:0x%x size %d space %d>' % [self.class, object_id, size, space]
   end
 
