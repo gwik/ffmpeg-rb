@@ -17,7 +17,7 @@ class FFMPEG::FormatParameters
         AVFormatParameters *format_parameters;
         VALUE obj;
 
-        format_parameters = av_malloc(sizeof(AVFormatParameters));
+        format_parameters = av_mallocz(sizeof(AVFormatParameters));
 
         if (!format_parameters)
           rb_raise(rb_eNoMemError, "unable to allocate AVFormatParameters");
@@ -52,7 +52,7 @@ class FFMPEG::FormatParameters
     builder.accessor :sample_rate,  'int'
     builder.accessor :width,        'int'
 
-    builder.accessor :standard, 'char *'
+    builder.accessor :standard, 'char *' # TODO need av_strlcpy?
   end
 end
 
