@@ -45,12 +45,12 @@ class FFMPEG::FormatParameters
     end
 
     builder.struct_name = 'AVFormatParameters'
-    builder.accessor :channel,     'int'
-    builder.accessor :channels,    'int'
-    builder.accessor :height,      'int'
-    builder.accessor :pix_fmt,     'int'
-    builder.accessor :sample_rate, 'int'
-    builder.accessor :width,       'int'
+    builder.accessor :channel,      'int'
+    builder.accessor :channels,     'int'
+    builder.accessor :height,       'int'
+    builder.accessor :pixel_format, 'int', :pix_fmt
+    builder.accessor :sample_rate,  'int'
+    builder.accessor :width,        'int'
 
     builder.accessor :standard, 'char *'
   end

@@ -62,6 +62,22 @@ class FFMPEG::FormatContext
     C
 
     ##
+    # :method: filename=
+
+    builder.c <<-C
+      void filename_equals(VALUE _filename) {
+        AVFormatContext *format_context;
+        char * filename;
+
+        filename = StringValueCStr(_filename);
+
+        Data_Get_Struct(self, AVFormatContext, format_context);
+
+        av_strlcpy(format_context->filename, filename, strlen(filename) + 1);
+      }
+    C
+
+    ##
     # :method: input_format
 
     builder.c <<-C
@@ -407,7 +423,7 @@ class FFMPEG::FormatContext
       output_format = FFMPEG::OutputFormat.guess_format nil, file, nil
 
       self.output_format = output_format
-      #self.filename = file # HACK av_strlcpy
+      self.filename = file
 
       file = "pipe:#{file.fileno}" if IO === file
 
@@ -438,6 +454,41 @@ class FFMPEG::FormatContext
     ]
   end
 
+  def encode_fifo(output_context, output_stream)
+    encoder = output_stream.codec_context
+
+    frame_bytes = encoder.frame_size * encoder.bytes_per_sample *
+      encoder.channels
+
+    while output_stream.fifo.size >= frame_bytes do
+      packet = FFMPEG::Packet.new
+      encoded = "\0" * frame_bytes * 2 # HACK
+
+      samples = "\0" * output_stream.fifo.size
+
+      size = output_stream.fifo.size
+      output_stream.fifo.read samples, frame_bytes
+
+      encoder.encode_audio samples, encoded
+
+      packet.buffer = encoded
+      packet.stream_index = output_stream.stream_index
+
+      if encoder.coded_frame and
+         encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
+        packet.pts = FFMPEG::Rational.rescale_q(encoder.coded_frame.pts,
+                                                encoder.time_base,
+                                                output_stream.time_base)
+      end
+
+      packet.flags |= FFMPEG::Packet::FLAG_KEY
+
+      output_context.interleaved_write packet
+
+      output_context.sync_pts += encoder.frame_size
+    end
+  end
+
   def encode_frame(frame, output_stream)
     @output_buffer ||= FFMPEG::FrameBuffer.new 1048576
     @output_packet ||= FFMPEG::Packet.new
@@ -445,34 +496,82 @@ class FFMPEG::FormatContext
 
     packet.stream_index = output_stream.stream_index
 
-    video_encoder = output_stream.codec_context
+    encoder = output_stream.codec_context
     frame.pts = output_stream.sync_pts
 
-    bytes = video_encoder.encode_video frame, @output_buffer
+    bytes = encoder.encode_video frame, @output_buffer
 
     packet.buffer = @output_buffer
     packet.size = bytes
 
-    if video_encoder.coded_frame and
-       video_encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
-      packet.pts = FFMPEG::Rational.rescale_q(video_encoder.coded_frame.pts,
-                                              video_encoder.time_base,
+    if encoder.coded_frame and
+       encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
+      packet.pts = FFMPEG::Rational.rescale_q(encoder.coded_frame.pts,
+                                              encoder.time_base,
                                               output_stream.time_base)
     else
       packet.pts = output_stream.sync_pts
     end
 
-    if video_encoder.coded_frame and video_encoder.coded_frame.key_frame then
+    if encoder.coded_frame and encoder.coded_frame.key_frame then
       packet.flags |= FFMPEG::Packet::FLAG_KEY
     end
 
     packet
   end
 
+  def encode_samples(samples, input_stream, output_context, output_stream)
+    encoder = output_stream.codec_context
+
+    # FIXME FFMPEG says this is wrong, but not why
+    output_stream.sync_pts = (input_stream.pts.to_f /
+                              FFMPEG::TIME_BASE *
+                              encoder.sample_rate).round -
+                              output_stream.fifo.size / encoder.channels * 2
+
+    if encoder.frame_size > 1 then
+      output_stream.fifo.realloc output_stream.fifo.size + samples.length
+
+      output_stream.fifo.write samples
+
+      encode_fifo output_context, output_stream
+    else
+      raise NotImplementedError,
+            "encoding #{encoder.frame_size} not implemented"
+      packet = FFMPEG::Packet.new
+      output_size = samples.length
+      coded_bps = encodec.bytes_per_sample
+
+      output_context.sync_pts += samples.length /
+        encoder.bytes_per_sample * encoder.channels
+
+      output_size /= encoder.bytes_per_sample
+
+      output_size *= coded_bps if coded_bps > 0
+
+      encoder.encode_audio blah
+
+      packet.buffer = encoded
+      packet.stream_index = output_stream.stream_index
+
+      if encoder.coded_frame and
+         encoder.coded_frame.pts != FFMPEG::NOPTS_VALUE then
+        packet.pts = FFMPEG::Rational.rescale_q(encoder.coded_frame.pts,
+                                                encoder.time_base,
+                                                output_stream.time_base)
+      end
+
+      packet.flags |= FFMPEG::Packet::FLAG_KEY
+
+      output_context.interleaved_write packet
+    end
+  end
+
   def output_audio(packet, output_context, output_stream, input_stream)
-    audio_decoder = input_stream.codec_context
-    audio_codec = audio_decoder.codec
-    buffer = ''
+    decoder = input_stream.codec_context
+    encoder = output_stream.codec_context
+    encodec = encoder.codec
+    samples = ''
 
     input_stream.next_pts = input_stream.pts if
       input_stream.next_pts == FFMPEG::NOPTS_VALUE
@@ -490,26 +589,30 @@ class FFMPEG::FormatContext
           (packet.nil? and input_stream.next_pts != input_stream.pts)
       input_stream.pts = input_stream.next_pts
 
-      new_size = [packet.size * buffer.length,
+      new_size = [packet.size * samples.length,
                   FFMPEG::Codec::MAX_AUDIO_FRAME_SIZE].max
 
-      buffer = "\0" * new_size if packet and buffer.length < new_size
+      samples = "\0" * new_size if packet and samples.length < new_size
 
-      bytes_used = audio_decoder.decode_audio buffer, packet
+      bytes_used = decoder.decode_audio samples, packet
 
       len -= bytes_used
 
-      input_stream.next_pts += FFMPEG::TIME_BASE / 2 * buffer.length /
-        audio_decoder.sample_rate * audio_decoder.channels
+      next if samples.size == 0
+
+      input_stream.next_pts += FFMPEG::TIME_BASE / 2 * samples.length /
+        decoder.sample_rate * decoder.channels
 
       # done decoding audio
+
+      encode_samples samples, input_stream, output_context, output_stream
     end
   end
 
   def output_video(packet, output_context, output_stream, input_stream)
-    video_decoder = input_stream.codec_context
-    @in_frame ||= FFMPEG::Frame.new(video_decoder.width, video_decoder.height,
-                                    video_decoder.pix_fmt)
+    decoder = input_stream.codec_context
+    encoder = output_stream.codec_context
+    @in_frame ||= FFMPEG::Frame.from decoder
 
     input_stream.next_pts = input_stream.pts if
       input_stream.next_pts == FFMPEG::NOPTS_VALUE
@@ -527,36 +630,29 @@ class FFMPEG::FormatContext
           (packet.nil? and input_stream.next_pts != input_stream.pts)
       input_stream.pts = input_stream.next_pts
 
-      data_size = video_decoder.width * video_decoder.height * 3 / 2
+      data_size = decoder.width * decoder.height * 3 / 2
 
       @in_frame.defaults
       @in_frame.quality = input_stream.quality
 
-      got_picture, bytes = video_decoder.decode_video @in_frame, packet
+      got_picture, bytes = decoder.decode_video @in_frame, packet
 
       break :fail if bytes.nil?
 
       @in_frame = nil unless got_picture
 
-      if video_decoder.time_base.num != 0 then
-        input_stream.next_pts += FFMPEG::TIME_BASE * video_decoder.time_base
+      if decoder.time_base.num != 0 then
+        input_stream.next_pts += FFMPEG::TIME_BASE * decoder.time_base
       end
 
       len = 0
 
       # done decoding
 
-      @scaler ||= FFMPEG::ImageScaler.new video_decoder.width,
-                                          video_decoder.height,
-                                          video_decoder.pix_fmt,
-                                          output_stream.codec_context.width,
-                                          output_stream.codec_context.height,
-                                          output_stream.codec_context.pix_fmt,
-                                          FFMPEG::ImageScaler::BICUBIC
+      @scaler ||= FFMPEG::ImageScaler.for decoder, encoder, :BICUBIC
 
       output_stream.sync_pts =
-        input_stream.pts.to_f / FFMPEG::TIME_BASE /
-        output_stream.codec_context.time_base
+        input_stream.pts.to_f / FFMPEG::TIME_BASE / encoder.time_base
 
       output_packet = output_context.encode_frame @scaler.scale(@in_frame),
                                                   output_stream
@@ -679,7 +775,8 @@ class FFMPEG::FormatContext
           encoder.bit_rate_tolerance = 0.2 * encoder.bit_rate if
           encoder.bit_rate_tolerance.zero?
 
-          encoder.pix_fmt = decoder.pix_fmt if encoder.pix_fmt == -1
+          encoder.pixel_format = decoder.pixel_format if
+            encoder.pixel_format == -1
 
           unless encoder.rc_initial_buffer_occupancy > 1 then
             encoder.rc_initial_buffer_occupancy =
@@ -690,7 +787,6 @@ class FFMPEG::FormatContext
     end
   end
 
-  # output only
   def output_stream(codec_type, codec_name = nil, options={})
     stream = new_output_stream
     stream.context_defaults codec_type
@@ -712,7 +808,7 @@ class FFMPEG::FormatContext
                when FFMPEG::Codec::VIDEO then
                  [:bit_rate, :width, :height]
                when FFMPEG::Codec::AUDIO then
-                 [:bit_rate]
+                 [:bit_rate, :channels]
                else raise NotImplementedError,
                           "codec type #{codec_type} not supported"
                end
@@ -727,7 +823,7 @@ class FFMPEG::FormatContext
 
     case codec_type
     when FFMPEG::Codec::VIDEO then
-      encoder.pix_fmt = options[:pixel_format] || codec.pixel_formats[0]
+      encoder.pixel_format = options[:pixel_format] || codec.pixel_formats[0]
       encoder.fps = options[:fps] || FFMPEG.Rational(25,1)
     when FFMPEG::Codec::AUDIO then
       sample_rate = options[:sample_rate] || 44100

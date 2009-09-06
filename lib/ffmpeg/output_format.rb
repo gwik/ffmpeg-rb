@@ -97,8 +97,6 @@ class FFMPEG::OutputFormat
     builder.reader :flags, 'int'
   end
 
-  attr_accessor :fifo
-
   def initialize(format_context)
     @format_context = format_context
   end

@@ -75,7 +75,7 @@ class FFMPEG::CodecContext
     # :method: decode_audio
 
     builder.c <<-C
-      VALUE decode_audio(VALUE buffer, VALUE packet) {
+      int decode_audio(VALUE buffer, VALUE packet) {
         AVCodecContext *codec_context;
         AVPacket *pkt;
         int16_t *samples;
@@ -95,13 +95,17 @@ class FFMPEG::CodecContext
 
         ffmpeg_check_error(bytes_used);
 
+        /* FFMPEG source mentions some codecs seem to overflow */
+        if (frame_size < 0)
+          frame_size = 0;
+
         #ifdef rb_str_set_len
         rb_str_set_len(buffer, frame_size);
         #else
         RSTRING(buffer)->len = frame_size;
         #endif
 
-        return INT2NUM(bytes_used);
+        return bytes_used;
       }
     C
 
@@ -146,6 +150,30 @@ class FFMPEG::CodecContext
         avcodec_get_context_defaults2(pointer, pointer->codec_type);
 
         return self;
+      }
+    C
+
+    ##
+    # :method: encode_audio
+
+    builder.c <<-C
+      int encode_audio(VALUE samples, VALUE encoded) {
+        AVCodecContext *codec_context;
+        int used;
+
+        Data_Get_Struct(self, AVCodecContext, codec_context);
+
+        used = avcodec_encode_audio(codec_context,
+                                    (uint8_t *)RSTRING_PTR(encoded),
+                                    (int)RSTRING_LEN(encoded),
+                                    (const short *)RSTRING_PTR(samples));
+
+        if (used < 0)
+          rb_raise(rb_path2class("FFMPEG::Error"), "audio encoding failed");
+
+        rb_str_set_len(encoded, used);
+
+        return used;
       }
     C
 
@@ -284,6 +312,7 @@ class FFMPEG::CodecContext
 
     builder.accessor :bit_rate,                    'int'
     builder.accessor :bit_rate_tolerance,          'int'
+    builder.accessor :channels,                    'int'
     builder.accessor :codec_id,                    'int'
     builder.accessor :gop_size,                    'int'
     builder.accessor :flags,                       'int'
@@ -296,8 +325,8 @@ class FFMPEG::CodecContext
     builder.accessor :sample_rate,                 'int'
     builder.accessor :width,                       'int'
 
-    builder.reader :channels,      'int'
     builder.reader :_codec_type,   'int', :codec_type
+    builder.reader :frame_size,    'int'
     builder.reader :sample_format, 'int', :sample_fmt
 
     builder.reader :codec_name, 'char *'

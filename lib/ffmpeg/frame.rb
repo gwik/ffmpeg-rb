@@ -38,15 +38,14 @@ class FFMPEG::Frame
         VALUE obj;
 
         frame = avcodec_alloc_frame();
-        frame->data[0] = NULL;
-        frame->data[1] = NULL;
-        frame->data[2] = NULL;
-        frame->data[3] = NULL;
 
         if (!frame)
           rb_raise(rb_eNoMemError, "unable to allocate AVFrame");
 
-        // fprintf(stderr, "alloc frame %p\\n", frame);
+        frame->data[0] = NULL;
+        frame->data[1] = NULL;
+        frame->data[2] = NULL;
+        frame->data[3] = NULL;
 
         obj = Data_Wrap_Struct(self, 0, free_frame, frame);
 
@@ -96,6 +95,9 @@ class FFMPEG::Frame
       }
     C
 
+    ##
+    # :method: key_frame
+
     builder.c <<-C
       VALUE key_frame() {
         AVFrame *frame;
@@ -108,21 +110,24 @@ class FFMPEG::Frame
       }
     C
 
+    ##
+    # :method: fill
+
     builder.c <<-C
       VALUE fill() {
         AVFrame *frame;
         Data_Get_Struct(self, AVFrame, frame);
 
-        VALUE pix_fmt = rb_iv_get(self, "@pix_fmt");
+        VALUE pix_fmt = rb_iv_get(self, "@pixel_format");
         VALUE width = rb_iv_get(self, "@width");
         VALUE height = rb_iv_get(self, "@height");
 
         if (!FIXNUM_P(pix_fmt))
-          rb_raise(rb_eRuntimeError, "pix_fmt not set properly cannot fill");
+          rb_raise(rb_eRuntimeError, "invalid pixel_format, cannot fill");
         if (!FIXNUM_P(width))
-          rb_raise(rb_eRuntimeError, "width not set properly cannot fill");
+          rb_raise(rb_eRuntimeError, "invalid width, cannot fill");
         if (!FIXNUM_P(height))
-          rb_raise(rb_eRuntimeError, "height not set properly cannot fill");
+          rb_raise(rb_eRuntimeError, "invalid height, cannot fill");
 
         // free data if needed
         if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER)
@@ -154,10 +159,19 @@ class FFMPEG::Frame
     builder.map_c_const 'FF_BI_TYPE' => ['int', :BI_TYPE]
   end
 
-  attr_accessor :width, :height, :pix_fmt
+  attr_accessor :height
+  attr_accessor :pixel_format
+  attr_accessor :width
 
-  def initialize(width=nil, height=nil, pix_fmt=nil)
-    @width, @height, @pix_fmt = width, height, pix_fmt
+  def self.from(codec_context)
+    new codec_context.width, codec_context.height, codec_context.pixel_format
+  end
+
+  def initialize(width = nil, height = nil, pixel_format = nil)
+    @height = height
+    @width = width
+
+    @pixel_format = pixel_format
   end
 
   def type

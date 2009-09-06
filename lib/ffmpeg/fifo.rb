@@ -9,23 +9,14 @@ class FFMPEG::FIFO
 
     builder.c_singleton <<-C
       VALUE allocate() {
-        return Data_Wrap_Struct(self, NULL, av_fifo_free, NULL);
-      }
-    C
-
-    ##
-    # :method: initialize
-
-    builder.c <<-C
-      void initialize(unsigned int bytes) {
         AVFifoBuffer *fifo;
 
-        Data_Get_Struct(self, AVFifoBuffer, fifo);
-
-        fifo = av_fifo_alloc(bytes);
+        fifo = av_fifo_alloc(0);
 
         if (!fifo)
           rb_raise(rb_eNoMemError, "could not allocate FFMPEG::FIFO");
+
+        return Data_Wrap_Struct(self, NULL, av_fifo_free, fifo);
       }
     C
 
@@ -43,10 +34,32 @@ class FFMPEG::FIFO
     C
 
     ##
-    # :method: realloc2
+    # :method: read
 
     builder.c <<-C
-      int realloc2(unsigned int bytes) {
+      VALUE read(VALUE buffer, int bytes) {
+        AVFifoBuffer *fifo;
+        int r;
+
+        buffer = rb_str_to_str(buffer);
+
+        if (RSTRING_LEN(buffer) < bytes)
+          rb_raise(rb_eArgError, "read size smaller than buffer");
+
+        Data_Get_Struct(self, AVFifoBuffer, fifo);
+        
+        r = av_fifo_generic_read(fifo, (void *)RSTRING_PTR(buffer), bytes,
+                                 NULL);
+
+        return buffer;
+      }
+    C
+
+    ##
+    # :method: realloc
+
+    builder.c <<-C, :method_name => :realloc
+      int fifo_realloc(unsigned int bytes) {
         AVFifoBuffer *fifo;
         int ret;
 
@@ -99,6 +112,33 @@ class FFMPEG::FIFO
         return av_fifo_space(fifo);
       }
     C
+
+    ##
+    # :method: write
+
+    builder.c <<-C
+      int write(VALUE buffer) {
+        AVFifoBuffer *fifo;
+        int written;
+
+        Data_Get_Struct(self, AVFifoBuffer, fifo);
+        
+        written = av_fifo_generic_write(fifo, (void *)RSTRING_PTR(buffer),
+                                        (int)RSTRING_LEN(buffer), NULL);
+
+        return written;
+      }
+    C
+
   end
+
+  def initialize(bytes)
+    realloc bytes
+  end
+
+  def inspect
+    '#<%s:0x%x size %d>' % [self.class, object_id, size]
+  end
+
 end
 

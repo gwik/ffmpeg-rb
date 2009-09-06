@@ -10,7 +10,7 @@ abort "#{$PROGRAM_NAME} filename" unless file
 input = FFMPEG::FormatContext.new file
 
 puts input.filename
-puts "#{input.duration.to_f / FFMPEG::TIME_BASE} seconds"
+puts "#{input.duration.to_f / FFMPEG::TIME_BASE} seconds #{input.bit_rate} bps"
 puts
 
 puts 'streams:'

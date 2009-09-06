@@ -130,11 +130,11 @@ class FFMPEG::Stream
 
   end
 
+  attr_accessor :fifo
+  attr_reader :format_context
   attr_accessor :next_pts
   attr_accessor :pts
   attr_accessor :sync_pts
-
-  attr_reader :format_context
 
   def initialize(format_context=nil)
     @format_context = format_context

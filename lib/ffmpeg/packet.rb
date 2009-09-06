@@ -58,15 +58,24 @@ class FFMPEG::Packet
 
     builder.c <<-C
       VALUE buffer_equals(VALUE buffer) {
-        AVPacket* packet;
-        FrameBuffer * buf;
-        Data_Get_Struct(buffer, FrameBuffer, buf);
+        AVPacket *packet;
+        FrameBuffer *buf;
+
         Data_Get_Struct(self, AVPacket, packet);
 
-        packet->data = buf->buf;
-        packet->size = buf->size;
-
         rb_iv_set(self, "@buffer", buffer);
+
+        switch (TYPE(buffer)) {
+        case T_DATA:
+          Data_Get_Struct(buffer, FrameBuffer, buf);
+          packet->data = buf->buf;
+          packet->size = buf->size;
+          break;
+        default:
+          buffer = rb_str_to_str(buffer);
+          packet->data = (uint8_t *)RSTRING_PTR(buffer);
+          packet->size = RSTRING_LEN(buffer);
+        }
 
         return buffer;
       }
