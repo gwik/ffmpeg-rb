@@ -5,7 +5,7 @@ class TestFFMPEGFrame < FFMPEG::TestCase
   def setup
     super
 
-    @frame = FFMPEG::Frame.new 40, 30, FFMPEG::PixelFormat::RGBA
+    @frame = FFMPEG::Frame.new 40, 30, FFMPEG::PixelFormat::YUV420P
     @frame.defaults
   end
 
@@ -19,6 +19,18 @@ class TestFFMPEGFrame < FFMPEG::TestCase
     assert_equal FFMPEG::PixelFormat::YUV420P, frame.pixel_format
   end
 
+  def test_data
+    @frame.fill
+
+    data = @frame.data
+
+    assert_equal 4,  data.length
+    assert_equal 40, data[0].length
+    assert_equal 20, data[1].length
+    assert_equal 20, data[2].length
+    assert_equal 0,  data[3].length
+  end
+
   def test_defaults
     @frame.defaults
 
@@ -28,8 +40,11 @@ class TestFFMPEGFrame < FFMPEG::TestCase
   end
 
   def test_fill
-    # this test sucks
+    assert_equal [ 0,  0,  0, 0], @frame.data.map { |d| d.length }
+
     @frame.fill
+
+    assert_equal [40, 20, 20, 0], @frame.data.map { |d| d.length }
   end
 
   def test_key_frame

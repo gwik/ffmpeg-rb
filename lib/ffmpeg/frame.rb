@@ -69,11 +69,32 @@ class FFMPEG::Frame
     C
 
     ##
+    # :method: data
+
+    builder.c <<-C
+      VALUE data() {
+        AVFrame *frame;
+
+        Data_Get_Struct(self, AVFrame, frame);
+        
+        if (!frame->data)
+          return Qnil;
+
+        return rb_ary_new3(4,
+          rb_str_new((char *)frame->data[0], frame->linesize[0]),
+          rb_str_new((char *)frame->data[1], frame->linesize[1]),
+          rb_str_new((char *)frame->data[2], frame->linesize[2]),
+          rb_str_new((char *)frame->data[3], frame->linesize[3]));
+      }
+    C
+
+    ##
     # :method: key_frame
 
     builder.c <<-C
       VALUE key_frame() {
         AVFrame *frame;
+
         Data_Get_Struct(self, AVFrame, frame);
 
         if (frame->key_frame)
@@ -135,8 +156,8 @@ class FFMPEG::Frame
   end
 
   attr_accessor :height
-  attr_accessor :pixel_format
   attr_accessor :width
+  attr_accessor :pixel_format
 
   def self.from(codec_context)
     new codec_context.width, codec_context.height, codec_context.pixel_format
