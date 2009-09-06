@@ -137,7 +137,7 @@ class FFMPEG::FIFO
   end
 
   def inspect
-    '#<%s:0x%x size %d>' % [self.class, object_id, size]
+    '#<%s:0x%x size %d space %d>' % [self.class, object_id, size, space]
   end
 
 end
