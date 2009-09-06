@@ -53,33 +53,6 @@ class FFMPEG::Frame
       }
     C
 
-    # builder.c_singleton <<-C
-    #   VALUE build(int width, int height, int pix_fmt) {
-    #     AVFrame *picture;
-    #     uint8_t *picture_buf;
-    #     int size;
-    #
-    #     picture = avcodec_alloc_frame();
-    #     if (!picture)
-    #         return NULL;
-    #
-    #     size = avpicture_get_size(pix_fmt, width, height);
-    #
-    #     picture_buf = av_malloc(size);
-    #     if (!picture_buf) {
-    #         av_free(picture);
-    #         rb_raise(rb_eNoMemError, "could not allocate picture");
-    #     }
-    #     avpicture_fill((AVPicture *)picture, picture_buf,
-    #         pix_fmt, width, height);
-    #
-    #     VALUE obj = Data_Wrap_Struct(self, 0, free_frame, picture);
-    #     rb_funcall(obj, rb_intern("initialize"), 3, width, height, pix_fmt);
-    #
-    #     return obj;
-    #   }
-    # C
-
     ##
     # :method: defaults
 
@@ -117,6 +90,7 @@ class FFMPEG::Frame
       VALUE fill() {
         AVFrame *frame;
         Data_Get_Struct(self, AVFrame, frame);
+        int e;
 
         VALUE pix_fmt = rb_iv_get(self, "@pixel_format");
         VALUE width = rb_iv_get(self, "@width");
@@ -136,19 +110,20 @@ class FFMPEG::Frame
         avcodec_get_frame_defaults(frame);
         frame->type = FF_BUFFER_TYPE_USER;
 
-        avpicture_alloc((AVPicture*)frame,
-                           FIX2INT(pix_fmt),
-                           FIX2INT(width),
-                           FIX2INT(height));
+        e = avpicture_alloc((AVPicture*)frame, FIX2INT(pix_fmt),
+                            FIX2INT(width), FIX2INT(height));
+
+        if (e != 0)
+          rb_raise(rb_path2class("FFMPEG::Error"), "unable to fill frame");
 
         return self;
       }
     C
 
     builder.struct_name = 'AVFrame'
-    builder.accessor :pts, 'int64_t'
-    builder.accessor :quality, 'int'
-    builder.reader   :pict_type, 'int'
+    builder.accessor :picture_type, 'int', :pict_type
+    builder.accessor :pts,          'int64_t'
+    builder.accessor :quality,      'int'
 
     builder.map_c_const 'FF_I_TYPE'  => ['int', :I_TYPE]
     builder.map_c_const 'FF_P_TYPE'  => ['int', :P_TYPE]
@@ -175,7 +150,7 @@ class FFMPEG::Frame
   end
 
   def type
-    case pict_type
+    case picture_type
     when I_TYPE  then :I_TYPE
     when P_TYPE  then :P_TYPE
     when B_TYPE  then :B_TYPE
