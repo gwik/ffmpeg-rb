@@ -74,17 +74,117 @@ class FFMPEG::Frame
     builder.c <<-C
       VALUE data() {
         AVFrame *frame;
+        VALUE ary;
+        int data_size, i;
+        char *data, *ptr;
 
         Data_Get_Struct(self, AVFrame, frame);
-        
+
         if (!frame->data)
           return Qnil;
 
-        return rb_ary_new3(4,
-          rb_str_new((char *)frame->data[0], frame->linesize[0]),
-          rb_str_new((char *)frame->data[1], frame->linesize[1]),
-          rb_str_new((char *)frame->data[2], frame->linesize[2]),
-          rb_str_new((char *)frame->data[3], frame->linesize[3]));
+        data_size = NUM2INT(rb_funcall(self, rb_intern("data_size"), 0));
+        ary = rb_ary_new2(4);
+
+        if (frame->data[0]) {
+          data = (char *)frame->data[0];
+          rb_ary_store(ary, 0, rb_str_new(data, data_size));
+
+          for (i = 1; i < 4; i++) {
+            ptr = (char *)frame->data[i];
+
+            if (ptr) {
+              rb_ary_store(ary, i,
+                           rb_str_new(ptr, data_size + data - ptr));
+            } else {
+              rb_ary_store(ary, i, Qnil);
+            }
+
+          }
+        } else {
+          for (i = 1; i < 4; i++)
+            rb_ary_store(ary, i, Qnil);
+        }
+
+        return ary;
+      }
+    C
+
+    ##
+    # :method: data=
+
+    builder.c <<-C
+      void data_equals(VALUE input) {
+        AVFrame *frame;
+        VALUE ff_error = rb_path2class("FFMPEG::Error");
+        VALUE row;
+        int data_size, i;
+
+        input = rb_ary_to_ary(input);
+
+        if (RARRAY_LEN(input) != 4)
+          rb_raise(rb_eArgError,
+                   "data must be of length 4 (was %d)", RARRAY_LEN(input));
+
+        Data_Get_Struct(self, AVFrame, frame);
+
+        if (!frame->data)
+          rb_raise(ff_error, "unfilled frame");
+
+        row = rb_ary_entry(input, 0);
+        row = rb_str_to_str(row);
+
+        data_size = NUM2INT(rb_funcall(self, rb_intern("data_size"), 0));
+
+        if (RSTRING_LEN(row) != data_size)
+          rb_raise(rb_eArgError,
+                   "data size mismatch (%d expected, was %d)",
+                   data_size, RSTRING_LEN(row));
+
+        memcpy(frame->data[0], RSTRING_PTR(row), RSTRING_LEN(row));
+
+        for (i = 1; i < 4; i++) {
+          if (frame->data[i]) {
+            row = rb_ary_entry(input, i);
+
+            if (NIL_P(row))
+              continue;
+
+            row = rb_str_to_str(row);
+
+            memcpy(frame->data[i], RSTRING_PTR(row),
+                   data_size + frame->data[0] - frame->data[i]);
+          }
+        }
+      }
+    C
+
+    ##
+    # :method: data_size
+
+    builder.c <<-C
+      int data_size() {
+        AVPicture picture;
+        int size;
+
+        VALUE width   = rb_iv_get(self, "@width");
+        VALUE height  = rb_iv_get(self, "@height");
+        VALUE pix_fmt = rb_iv_get(self, "@pixel_format");
+
+        if (!FIXNUM_P(width))
+          rb_raise(rb_eRuntimeError, "invalid width, cannot size");
+        if (!FIXNUM_P(height))
+          rb_raise(rb_eRuntimeError, "invalid height, cannot size");
+        if (!FIXNUM_P(pix_fmt))
+          rb_raise(rb_eRuntimeError, "invalid pixel_format, cannot size");
+
+        size = avpicture_fill(&picture, NULL, FIX2INT(pix_fmt),
+                           FIX2INT(width), FIX2INT(height));
+
+        if (size < 0)
+          rb_raise(rb_path2class("FFMPEG::Error"), "unable to get size");
+
+        return size;
       }
     C
 
@@ -105,33 +205,63 @@ class FFMPEG::Frame
     C
 
     ##
+    # :method: linesize
+
+    builder.c <<-C
+      VALUE linesize() {
+        AVFrame *frame;
+        VALUE ary;
+        int i;
+
+        Data_Get_Struct(self, AVFrame, frame);
+
+        if (!frame->data)
+          return Qnil;
+
+        ary = rb_ary_new2(4);
+
+        for (i = 0; i < 4; i++) {
+          rb_ary_store(ary, i, INT2NUM(frame->linesize[i]));
+        }
+
+        return ary;
+      }
+    C
+
+    ##
     # :method: fill
 
     builder.c <<-C
       VALUE fill() {
         AVFrame *frame;
         Data_Get_Struct(self, AVFrame, frame);
-        int e;
+        int e, i;
 
+        VALUE width   = rb_iv_get(self, "@width");
+        VALUE height  = rb_iv_get(self, "@height");
         VALUE pix_fmt = rb_iv_get(self, "@pixel_format");
-        VALUE width = rb_iv_get(self, "@width");
-        VALUE height = rb_iv_get(self, "@height");
 
-        if (!FIXNUM_P(pix_fmt))
-          rb_raise(rb_eRuntimeError, "invalid pixel_format, cannot fill");
         if (!FIXNUM_P(width))
           rb_raise(rb_eRuntimeError, "invalid width, cannot fill");
         if (!FIXNUM_P(height))
           rb_raise(rb_eRuntimeError, "invalid height, cannot fill");
+        if (!FIXNUM_P(pix_fmt))
+          rb_raise(rb_eRuntimeError, "invalid pixel_format, cannot fill");
 
         // free data if needed
-        if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER)
+        if (frame->data[0] && frame->type == FF_BUFFER_TYPE_USER) {
           av_freep(frame->data[0]);
+
+          for (i = 0; i < 4; i++)
+            frame->data[i] = NULL;
+          for (i = 0; i < 4; i++)
+            frame->linesize[i] = 0;
+        }
 
         avcodec_get_frame_defaults(frame);
         frame->type = FF_BUFFER_TYPE_USER;
 
-        e = avpicture_alloc((AVPicture*)frame, FIX2INT(pix_fmt),
+        e = avpicture_alloc((AVPicture *)frame, FIX2INT(pix_fmt),
                             FIX2INT(width), FIX2INT(height));
 
         if (e != 0)
@@ -168,6 +298,10 @@ class FFMPEG::Frame
     @width = width
 
     @pixel_format = pixel_format
+  end
+
+  def clear
+    self.data = ["\000" * data_size, nil, nil, nil]
   end
 
   def type
