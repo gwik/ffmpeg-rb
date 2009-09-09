@@ -127,8 +127,10 @@ class FFMPEG::Stream
     builder.accessor :start_time, 'int64_t'
 
     builder.accessor :quality, 'double'
-
   end
+
+  ##
+  # FIFO for audio streams
 
   attr_accessor :fifo
   attr_reader :format_context
@@ -141,6 +143,7 @@ class FFMPEG::Stream
     @next_pts = FFMPEG::NOPTS_VALUE
     @pts = 0
     @sync_pts = 0
+    @fifo = nil
   end
 
   def inspect

@@ -1,11 +1,25 @@
 require 'rubygems'
+require 'fileutils'
 require 'minitest/autorun'
+require 'tmpdir'
+
 require 'ffmpeg'
 
 class FFMPEG::TestCase < MiniTest::Unit::TestCase
 
   def setup
     @thumbs_up = File.expand_path 'Thumbs Up!.3gp', 'test'
+
+    @tmpdir = File.join Dir.tmpdir, "ffmpeg_test_#{$$}"
+
+    FileUtils.mkdir_p @tmpdir
+
+    @thumbs_out = File.join @tmpdir,
+                            File.basename(@thumbs_up).sub(/3gp$/, 'wmv')
+  end
+
+  def teardown
+    FileUtils.rm_rf @tmpdir
   end
 
   ##
