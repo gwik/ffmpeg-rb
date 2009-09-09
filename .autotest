@@ -2,6 +2,7 @@ require 'autotest/restart'
 
 Autotest.add_hook :initialize do |at|
 
+  at.add_exception '.git'
   at.testlib = 'minitest/unit'
 
   def at.path_to_classname(s)
