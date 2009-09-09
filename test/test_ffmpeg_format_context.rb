@@ -21,6 +21,14 @@ class TestFFMPEGFormatContext < FFMPEG::TestCase
     assert_equal 29998, @fc.file_size
   end
 
+  def test_input_eh
+    assert @fc.input?
+
+    output = @FC.new @thumbs_out, true
+
+    refute output.input?
+  end
+
   def test_input_format
     assert_equal 'mov,mp4,m4a,3gp,3g2,mj2', @fc.input_format.name
   end

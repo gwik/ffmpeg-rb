@@ -454,6 +454,10 @@ class FFMPEG::FormatContext
     ]
   end
 
+  def input?
+    @input
+  end
+
   def encode_fifo(output_context, output_stream)
     encoder = output_stream.codec_context
 

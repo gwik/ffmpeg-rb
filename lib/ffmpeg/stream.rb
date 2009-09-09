@@ -1,6 +1,14 @@
+##
+# Creates a Stream from a FormatContext.  Streams may not be created without a
+# FormatContext.
+
 class FFMPEG::Stream
   inline :C do |builder|
     FFMPEG.builder_defaults builder
+
+    builder.add_to_init <<-C
+      rb_undef_alloc_func(c);
+    C
 
     ##
     # :singleton-method: from
@@ -128,6 +136,8 @@ class FFMPEG::Stream
 
     builder.accessor :quality, 'double'
   end
+
+  private_class_method :new
 
   ##
   # FIFO for audio streams
