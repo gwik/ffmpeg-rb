@@ -32,15 +32,22 @@ class FFMPEG::Packet
 
     builder.c <<-C
       VALUE buffer() {
-        AVPacket* packet;
+        AVPacket *packet;
+        FrameBuffer *buf = NULL;
+        VALUE buffer;
+
         Data_Get_Struct(self, AVPacket, packet);
 
-        VALUE buffer = rb_iv_get(self, "@buffer");
+        buffer = rb_iv_get(self, "@buffer");
 
-        FrameBuffer * buf = NULL;
-
-        if (!NIL_P(buffer)) {
+        switch (TYPE(buffer)) {
+        case T_DATA:
           Data_Get_Struct(buffer, FrameBuffer, buf);
+          break;
+        default:
+          if (!NIL_P(buffer)) /* HACK remove FrameBuffer */
+            return buffer;
+          break;
         }
 
         if (NIL_P(buffer) || (buf->buf != packet->data)) {
@@ -73,7 +80,7 @@ class FFMPEG::Packet
           break;
         default:
           buffer = rb_str_to_str(buffer);
-          packet->data = (uint8_t *)RSTRING_PTR(buffer);
+          packet->data = (uint8_t *)StringValuePtr(buffer);
           packet->size = RSTRING_LEN(buffer);
         }
 
@@ -95,6 +102,8 @@ class FFMPEG::Packet
         packet->pts  = AV_NOPTS_VALUE;
         packet->dts  = AV_NOPTS_VALUE;
         packet->pos  = -1;
+
+        rb_iv_set(self, "@buffer", Qnil);
 
         return self;
       }
